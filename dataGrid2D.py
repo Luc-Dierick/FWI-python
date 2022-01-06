@@ -53,4 +53,22 @@ class dataGrid2D():
     def getRealPart(self):
         raise NotImplementedError
 
-    
+    def __truediv__(self, rhs):
+        if isinstance(rhs,dataGrid2D):
+            for i in range(len(self.data)):
+                self.data[i] /= rhs.data[i]
+        else:
+            for i in self.data:
+                i /= rhs
+
+        return self
+            
+    def __mul__(self,rhs):
+        if isinstance(rhs,dataGrid2D):
+            for i in range(len(self.data)):
+                self.data[i] *= rhs.data[i]
+        else:
+            for i in self.data:
+                i *= rhs
+        return self
+            

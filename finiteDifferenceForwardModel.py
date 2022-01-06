@@ -24,12 +24,17 @@ class FiniteDifferenceForwardModel():
 
         self.createKappa(self.freq,self.source,self.receiver)
         self.createGreens()
+        
+        self.createPTot(freq,source)
+        self.calculateKappa()
 
     def createGreens(self):
         for i in range(self.freq.count):
-            self.Greens.append(greensRect2DCpu(self.grid,self.helmholtz2D, self.source,self.receiver,self.freq.k[i]))
 
-  
+            rect = greensRect2DCpu(self.grid,self.helmholtz2D, self.source,self.receiver,self.freq.k[i])
+            self.Greens.append(rect)
+
+
     def helmholtz2D(self,k,r):
         value_r = 0.0
         value_i = 0.0 
@@ -53,17 +58,24 @@ class FiniteDifferenceForwardModel():
     def createPTot(self,freq,source):
         for i in range(freq.count):
             for j in range(source.count):
-                self.vpTot.append(dataGrid2D(self.Greens.getReceivercont(j) / (self.freq.k[i] * self.freq.k[j] *self.grid.getCellVolume())))
-
-
+                vp = self.Greens[i].getReceiverCont(j)
+                self.vpTot.append(vp)
+       
     def calculateKappa(self):
-        pass
-
+        for i in range(self.freq.count):
+            li = i * self.receiver.count * self.source.count
+            for j in range(self.receiver.count):
+                lj = j * self.source.count
+                for k in range(self.source.count):
+                    d =  self.Greens[i].getReceiverCont(j) 
+                    v = self.vpTot[i * self.source.count + k]
+                    self.vkappa[li+lj+k] = d*v
+        
     def calculatePTot(self, chiEst):
-        pass
+        raise NotImplementedError
 
     def getResidualGradient(res, kRes):
-        pass
+        raise NotImplementedError
 
     def getGrid(self):
         return self.grid

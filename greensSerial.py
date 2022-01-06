@@ -2,21 +2,21 @@ from grid2D import grid2D
 from dataGrid2D import dataGrid2D
 import math
 
-class greensRect2DCpu():
+class greensRect2DCpu(dataGrid2D):
     def __init__(self, grid:grid2D, gFunc, source,receiver, k:float) -> None:
         self.grid = grid
         self.G_func = gFunc
         self.source =source
         self.receiver = receiver
         self.k = k
-       
+        self.gRecv = []
         
         self.nx = self.grid.getGridDimensions()
         self.gVol = [complex(128)] * int((2*self.nx[1]-1) * (2*self.nx[0]-1))
 
         self.createGreensVolume()
         self.createGreensRecv()
-        self.createGreensRect2D()
+        # self.createGreensRect2D()
 
     def createGreensRect2D(self,G,dx,nx,gFunc,k):
         vol = dx[0]*dx[1]
@@ -62,18 +62,35 @@ class greensRect2DCpu():
         testField = outputFieldData
 
     
-    def setGreensFunction(self, greensFunctionField, func):
-        raise NotImplementedError
-
-    
     def createGreensVolumeAnKit(self):
         raise NotImplementedError
 
     def createGreensRecv(self):
-        raise NotImplementedError
+        vol = self.grid.getCellVolume()
+        for i in range(self.receiver.count):
+            x_receiver = self.receiver.xRecv[i][0]
+            z_receiver = self.receiver.xRecv[i][1]
+
+            G_bound = dataGrid2D(self.grid)
+
+            nx = self.grid.getGridDimensions()
+            dx = self.grid.getCellDimensions()
+            x_min = self.grid.getGridStart()
+
+            G_bound = dataGrid2D(self.grid)
+            
+            for j in range(nx[1]):
+                z = x_min[1] + (j+0.5)*dx[1]
+                nx_j = nx[0] * j
+                for t in range(nx[0]):
+                    x = x_min[0]  + (0.5+t)*dx[0]
+                    G_bound.data[nx_j + t] = vol * self.G_func(self.k, math.sqrt((x-x_receiver)**2 + (z-z_receiver)**2))
+
+            self.gRecv.append(G_bound)
+
 
     def deleteGreensRecv(self):
-        raise NotImplementedError
+        self.gRecv = []
 
-    def getReceiver(self, iRecv):
-        raise NotImplementedError
+    def getReceiverCont(self, iRecv):
+        return self.gRecv[iRecv]
