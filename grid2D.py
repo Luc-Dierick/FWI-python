@@ -30,7 +30,7 @@ class grid2D():
     def getGridEnd(self):
         return self._xMax
 
-    def getNumberOfGrindPoints(self):
+    def getNumberOfGridPoints(self):
         return self._nGridPoints
 
     def getCellVolume(self):

@@ -1,11 +1,14 @@
 from grid2D import grid2D
 import math
+import numpy as np
 
 class dataGrid2D():
     def __init__(self,grid:grid2D) -> None:
         self.grid = grid
         self.data = [0.0] * self.grid._nGridPoints
 
+    def getData(self):
+        return self.data
 
     def zero(self):
         self.data = [0.0] * self.grid._nGridPoints
@@ -23,7 +26,8 @@ class dataGrid2D():
             num = 1/num
 
     def conjugate(self):
-        raise NotImplementedError
+        for i in self.data:
+            i = np.conj(i)
 
     def random(self):
         raise NotImplementedError
@@ -51,7 +55,10 @@ class dataGrid2D():
         raise NotImplementedError
 
     def getRealPart(self):
-        raise NotImplementedError
+        res = []
+        for i in self.data:
+            res.append(i.real)
+        return res
 
     def __truediv__(self, rhs):
         if isinstance(rhs,dataGrid2D):
@@ -72,3 +79,20 @@ class dataGrid2D():
                 i *= rhs
         return self
             
+    def __sub__(self,rhs):
+        if isinstance(rhs,dataGrid2D):
+            for i in range(len(self.data)):
+                self.data[i] -= rhs.data[i]
+        else:
+            for i in self.data:
+                i -= rhs
+        return self
+
+    def __add__(self,rhs):
+        if isinstance(rhs,dataGrid2D):
+            for i in range(len(self.data)):
+                self.data[i] += rhs.data[i]
+        else:
+            for i in self.data:
+                i += rhs
+        return self

@@ -8,6 +8,8 @@ from sources import Sources
 from receivers import Receivers
 from frequenciesGroup import frequenciesGroup
 from finiteDifferenceForwardModel import FiniteDifferenceForwardModel
+from conjugateGradientInversion import ConjugateGradientInversion
+
 def main():
 
     arguments = parse_args()
@@ -33,7 +35,10 @@ def main():
             referencePressureData.append(complex(float(c[0]),float(c[1])))
     
     model = FiniteDifferenceForwardModel(grid,source,receiver,freq,None)
+    
+    inverse = ConjugateGradientInversion(None,model,input_data)
 
+    inverse.reconstruct(referencePressureData, input_data)
     
 
  

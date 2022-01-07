@@ -16,6 +16,7 @@ class FiniteDifferenceForwardModel():
         self.receiver = receiver
         self.freq = freq
         self.fmInput = fmInput
+        self.magnitude = self.source.count * self.freq.count * self.receiver.count
 
         self.vkappa = []
         self.Greens = []
@@ -27,6 +28,10 @@ class FiniteDifferenceForwardModel():
         
         self.createPTot(freq,source)
         self.calculateKappa()
+
+
+    def getKernel(self):
+        return self.vkappa
 
     def createGreens(self):
         for i in range(self.freq.count):
@@ -46,10 +51,9 @@ class FiniteDifferenceForwardModel():
         
   
     def calcTotalField(self, G, chiEst, Pinit):
-        pass
+        raise NotImplementedError
 
-    def applyKappa(self, CurrentPressureFieldSerial, pData):
-        pass
+   
 
     def createKappa(self,freq,source, receiver):
         for i in range(freq.count*source.count*receiver.count):
@@ -70,7 +74,17 @@ class FiniteDifferenceForwardModel():
                     d =  self.Greens[i].getReceiverCont(j) 
                     v = self.vpTot[i * self.source.count + k]
                     self.vkappa[li+lj+k] = d*v
+
+    def calculatePressureField(self, chiEst):
+        #second function
+        return self.applyKappa(chiEst)
         
+    def applyKappa(self, CurrentPressureFieldSerial):
+        kOperator = []
+        for i in range(self.magnitude):
+            kOperator.append(self.dotProduct(self.vkappa[i],CurrentPressureFieldSerial))
+        return kOperator
+
     def calculatePTot(self, chiEst):
         raise NotImplementedError
 
@@ -90,4 +104,14 @@ class FiniteDifferenceForwardModel():
         return self.freq
 
 
+    def dotProduct(self, lhs, rhs):
+        sum = 0
+        if isinstance(rhs,dataGrid2D):
+            rhsData = rhs.getData()
+        else:
+            rhsData = rhs
+        for i in range(lhs.grid.getNumberOfGridPoints()):
 
+            sum += lhs.data[i] * rhsData[i]
+
+        return sum

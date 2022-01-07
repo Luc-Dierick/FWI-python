@@ -1,6 +1,6 @@
 from ctypes import cdll
 from ctypes import c_double
-lib = cdll.LoadLibrary('./neumann.so')
+lib = cdll.LoadLibrary('/home/lucdierick/FWI-python/neumann.so')
  
 class Wrapper(object):
     def __init__(self):
