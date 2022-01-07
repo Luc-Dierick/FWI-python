@@ -44,6 +44,8 @@ class FiniteDifferenceForwardModel():
         value_r = 0.0
         value_i = 0.0 
         if r != 0.0:
+            print(self.wrapper.cyl_neumann(0.0,k*550.626793).value * k * k )
+            
             value_r = -0.25 * self.wrapper.cyl_neumann(0.0,k*r).value * k *k
             value_i = 0.25 * self.wrapper.cyl_bessel_j(0.0,k*r).value * k * k
         c = complex(value_r,value_i)

@@ -6,9 +6,9 @@ class grid2D():
         self._xMin = x_min
         self._xMax = x_max 
         self._nx = [int(x) for x in nx]
-        self._dx = [None]*2 
-        self._dx[0] = (self._xMax[0] - self._xMin[0])/self._nx[0]
-        self._dx[1] = (self._xMax[1] - self._xMin[1])/self._nx[1]
+        self._dx = [0]*2 
+        self._dx[0] = int((self._xMax[0] - self._xMin[0])/self._nx[0])
+        self._dx[1] = int((self._xMax[1] - self._xMin[1])/self._nx[1])
         self._nGridPoints = int(self._nx[0]*self._nx[1])
         self._cellVolume = self._dx[0] *self._dx[1]
         
@@ -34,7 +34,7 @@ class grid2D():
         return self._nGridPoints
 
     def getCellVolume(self):
-        return self._cellVolume
+        return int(self._cellVolume)
 
     def getDomainArea(self):
         return (self._xMax[0] - self._xMin[0]) * (self._xMax[1] - self._xMin[1])

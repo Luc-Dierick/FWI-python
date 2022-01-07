@@ -17,8 +17,25 @@ class ConjugateGradientInversion():
         self.chiEstimate = dataGrid2D(self.grid)
 
 
-    def calculateCost(self, pdata, l, one):
-        return 1
+    def calculateCost(self, pData, pDataEst, eta):
+        return eta * self.l2NormSquared(self.complex_sub(pData,pDataEst))
+
+    def l2NormSquared(self, a):
+        initialvalue = 0.0
+        for i in a:
+            initialvalue += (i.real * i.real + i.imag * i.imag)
+
+        return initialvalue
+
+    def complex_sub(self,a,b):
+        for i in range(len(a)):
+            a[i] -= b[i]
+        return a
+
+    def complex_add(self,a,b):
+        for i in range(len(a)):
+            a[i] += b[i]
+        return b
 
     def reconstruct(self, pData, gInput):
 
@@ -56,7 +73,6 @@ class ConjugateGradientInversion():
         zeta = self.calculateUpdateDirection(residualVector, gradientCurrent, eta)
         alpha = self.calculateStepSize(zeta, residualVector)
 
-        print(f"a: {alpha}")
 
         self.chiEstimate = self.chiEstimate + (alpha * zeta)
         
@@ -122,18 +138,19 @@ class ConjugateGradientInversion():
     def calculateUpdateDirection(self, residualVector, gradientCurrent, eta):
         kappaTimesResidual = dataGrid2D(self.grid)
         self.getUpdateDirectionInformation(residualVector, kappaTimesResidual)
-        gradientCurrent =  self.mult(eta,kappaTimesResidual.getRealPart())
+        gradientCurrent =  dataGrid2D(self.mult(eta,kappaTimesResidual.getRealPart()))
 
         return gradientCurrent
 
     def getUpdateDirectionInformation(self, residualVector, kappaTimesResidual):
         kappaTimesResidual.zero()
+        kappa = self.forwardModel.getKernel()
         for i in range(self.frequencies.count):
             l_i = i * self.receivers.count * self.sources.count
             for j in range(self.receivers.count):
                 l_j = j* self.receivers.count
                 for k in range(self.receivers.count):
-                    dummy = self.forwardModel.getKernel()[l_i + l_j + k]
+                    dummy = kappa[l_i + l_j + k]
                     dummy.conjugate()
 
                     kappaTimesResidual = kappaTimesResidual + (dummy * residualVector[l_i + l_j + k])
