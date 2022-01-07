@@ -11,9 +11,8 @@ class Wrapped{
     public:
         double cyl_neumann(double a, double b){
             double res;
-            res = std::cyl_neumann(a, b);
-            std::cout << res << std::endl;
-            return res;
+            return std::cyl_neumann(a, b);
+      
         }
 
         double cyl_bessel_j(double a, double b){
@@ -25,7 +24,7 @@ class Wrapped{
 
 
 extern "C" {
-    __declspec(dllexport)
+    // __declspec(dllexport)
     Wrapped* wrapped_new() { return new Wrapped();}
     double Wrapped_cyl_neumann( Wrapped* wrapped, double a, double b){ return wrapped->cyl_neumann(a,b);}
     double Wrapped_cyl_bessel_j( Wrapped* wrapped, double a, double b){ return wrapped->cyl_bessel_j(a,b);}
