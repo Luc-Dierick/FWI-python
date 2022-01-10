@@ -1,6 +1,8 @@
+from typing import List
 from grid2D import grid2D
 import math
 import numpy as np
+import copy
 
 class dataGrid2D():
     def __init__(self,grid:grid2D) -> None:
@@ -20,10 +22,10 @@ class dataGrid2D():
         self.data = [math.sqrt(x) for x in self.data]
 
     def reciprocal(self):
-        for num in self.data:
-            if num == 0:
+        for i in range(len(self.data)):
+            if self.data[i] == 0:
                 raise "exception, reciprocal divides by zero"
-            num = 1/num
+            self.data[i] = 1.0 / self.data[i]
 
     def conjugate(self):
         for i in self.data:
@@ -43,17 +45,51 @@ class dataGrid2D():
         raise NotImplementedError
 
     def summation(self):
-        raise NotImplementedError
+        result = 0.0
+        for i in range(self.grid.getNumberOfGridPoints()):
+            result += self.data[i]
+        return result
 
     def innerProduct(self, rhs) -> float:
-        raise NotImplementedError
+        prod = 0.0
+        for i in range(len(self.data)):
+            prod+= (self.data[i]*np.conj(rhs.data[i])).real
+        
+        return prod
 
     def dotProduct(self)-> float:
         raise NotImplementedError
 
-    def gradient(self)-> float:
-        raise NotImplementedError
+    def gradient(self, gradientField):
+        nx = self.grid.getGridDimensions()
+        dx = self.grid.getCellDimensions()
 
+        for i in range(nx[1]):
+            for j in  range(nx[0]):
+                index = i * nx[0] + j
+                gradientDx = None
+                if(j == 0):
+                    gradientDx = (self.data[i * nx[0] + j + 2] - 4 * self.data[i * nx[0] + j + 1] + 3 * self.data[i * nx[0] + j]) / (-2.0 * dx[0])
+                elif(j == nx[0] - 1):
+                    gradientDx = (self.data[i * nx[0] + j - 2] - 4 * self.data[i * nx[0] + j - 1] + 3 * self.data[i * nx[0] + j]) / (2.0 * dx[0])
+                else:
+                    gradientDx = (self.data[i * nx[0] + j + 1] - self.data[i * nx[0] + j - 1]) / (2.0 * dx[0])
+                
+                gradientField[0].data[index] = copy.deepcopy(gradientDx)
+                # print(index)
+                # print(gradientDx)
+                # print( gradientField[0].data[0] )
+
+                gradientDz = None
+                if(i == 0):
+                    gradientDz = (self.data[(i + 2) * nx[0] + j] - 4 * self.data[(i + 1) * nx[0] + j] + 3 * self.data[i * nx[0] + j]) / (-2.0 * dx[1])
+                elif(i == nx[1] - 1):
+                    gradientDz = (self.data[(i - 2) * nx[0] + j] - 4 * self.data[(i - 1) * nx[0] + j] + 3 * self.data[i * nx[0] + j]) / (2.0 * dx[1])
+                else:
+                    gradientDz = (self.data[(i + 1) * nx[0] + j] - self.data[(i - 1) * nx[0] + j]) / (2.0 * dx[1])
+                gradientField[1].data[index] = copy.deepcopy(gradientDz)
+
+   
     def getRealPart(self):
         res = []
         for i in self.data:
@@ -61,38 +97,47 @@ class dataGrid2D():
         return res
 
     def __truediv__(self, rhs):
+        res = dataGrid2D(self.grid)
         if isinstance(rhs,dataGrid2D):
             for i in range(len(self.data)):
-                self.data[i] /= rhs.data[i]
+                res.data[i] = self.data[i] / rhs.data[i]
         else:
-            for i in self.data:
-                i /= rhs
+            for i in range(len(self.data)):
+                res.data[i] = self.data[i] / rhs
 
-        return self
+        return res
             
     def __mul__(self,rhs):
+        res = dataGrid2D(self.grid)
         if isinstance(rhs,dataGrid2D):
             for i in range(len(self.data)):
-                self.data[i] *= rhs.data[i]
+                res.data[i] = self.data[i] * rhs.data[i]
         else:
-            for i in self.data:
-                i *= rhs
-        return self
+            for i in range(len(self.data)):
+                res.data[i] = self.data[i]* rhs
+        return res
             
     def __sub__(self,rhs):
+        res = dataGrid2D(self.grid)
         if isinstance(rhs,dataGrid2D):
             for i in range(len(self.data)):
-                self.data[i] -= rhs.data[i]
+                res.data[i] = self.data[i] - rhs.data[i]
         else:
-            for i in self.data:
-                i -= rhs
-        return self
+            for i in range(len(self.data)):
+                res.data[i] = self.data[i] - rhs
+        return res
 
     def __add__(self,rhs):
+        res = dataGrid2D(self.grid)
         if isinstance(rhs,dataGrid2D):
             for i in range(len(self.data)):
-                self.data[i] += rhs.data[i]
+                res.data[i] = self.data[i] + rhs.data[i]
         else:
-            for i in self.data:
-                i += rhs
-        return self
+            if isinstance(rhs,List):
+                for i in range(len(rhs)):
+                    res.data[i] = self.data[i] + rhs[i]
+            else:
+                for i in range(len(self.data)):
+                    res.data[i] = self.data[i] + rhs
+
+        return res

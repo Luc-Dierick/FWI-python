@@ -3,7 +3,7 @@ from dataGrid2D import dataGrid2D
 from grid2D import grid2D
 from greensSerial import greensRect2DCpu
 from wrapper import Wrapper
-
+import copy
 
 
 class FiniteDifferenceForwardModel():
@@ -23,15 +23,15 @@ class FiniteDifferenceForwardModel():
         self.vpTot = []
         self.residual = []
 
-        self.createKappa(self.freq,self.source,self.receiver)
         self.createGreens()
-        
+        self.createKappa(self.freq,self.source,self.receiver)
+
         self.createPTot(freq,source)
         self.calculateKappa()
 
 
     def getKernel(self):
-        return self.vkappa
+        return copy.deepcopy(self.vkappa)
 
     def createGreens(self):
         for i in range(self.freq.count):
@@ -43,11 +43,9 @@ class FiniteDifferenceForwardModel():
     def helmholtz2D(self,k,r):
         value_r = 0.0
         value_i = 0.0 
-        if r != 0.0:
-            print(self.wrapper.cyl_neumann(0.0,k*550.626793).value * k * k )
-            
-            value_r = -0.25 * self.wrapper.cyl_neumann(0.0,k*r).value * k *k
-            value_i = 0.25 * self.wrapper.cyl_bessel_j(0.0,k*r).value * k * k
+        if r != 0.0:          
+            value_r = -0.25 * self.wrapper.cyl_neumann(0.0,k*r) * k *k
+            value_i = 0.25 * self.wrapper.cyl_bessel_j(0.0,k*r) * k * k
         c = complex(value_r,value_i)
         return c
         
@@ -64,18 +62,26 @@ class FiniteDifferenceForwardModel():
     def createPTot(self,freq,source):
         for i in range(freq.count):
             for j in range(source.count):
-                vp = self.Greens[i].getReceiverCont(j)
+                vp = self.Greens[i].getReceiverCont(j) / (self.freq.k[i]**2 * self.grid.getCellVolume())
                 self.vpTot.append(vp)
        
     def calculateKappa(self):
         for i in range(self.freq.count):
+
             li = i * self.receiver.count * self.source.count
+
             for j in range(self.receiver.count):
+
                 lj = j * self.source.count
+
                 for k in range(self.source.count):
-                    d =  self.Greens[i].getReceiverCont(j) 
-                    v = self.vpTot[i * self.source.count + k]
+                    
+                    d =  copy.deepcopy(self.Greens[i].getReceiverCont(j))
+                    v = copy.deepcopy(self.vpTot[i * self.source.count + k])
+
                     self.vkappa[li+lj+k] = d*v
+
+
 
     def calculatePressureField(self, chiEst):
         #second function

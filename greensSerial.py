@@ -1,6 +1,7 @@
 from grid2D import grid2D
 from dataGrid2D import dataGrid2D
 import math
+import copy
 
 class greensRect2DCpu(dataGrid2D):
     def __init__(self, grid:grid2D, gFunc, source,receiver, k:float) -> None:
@@ -12,10 +13,13 @@ class greensRect2DCpu(dataGrid2D):
         self.gRecv = []
         
         self.nx = self.grid.getGridDimensions()
-        self.gVol = [complex(128)] * int((2*self.nx[1]-1) * (2*self.nx[0]-1))
+        self.gVol = [complex(0)] * ((2 * self.nx[1] - 1) * (2 * self.nx[0] - 1))
 
         self.createGreensVolume()
+
         self.createGreensRecv()
+        # self.createGreensVolumeAnKit()
+
         # self.createGreensRect2D()
 
     def createGreensRect2D(self,G,dx,nx,gFunc,k):
@@ -39,7 +43,8 @@ class greensRect2DCpu(dataGrid2D):
                 x = j*dx[0]
                 r = math.sqrt(z**2 + x**2)
                 val = self.G_func(self.k,r)
-                self.gVol[(nx[1]+i-1)*(2*nx[0]-1)+(nx[0]+j-1)] = val*vol
+                index = (nx[1]+i-1)*(2*nx[0]-1)+(nx[0]+j-1)
+                self.gVol[index] = val*vol
                 
 
     def contractWithField(self,x):
@@ -63,7 +68,12 @@ class greensRect2DCpu(dataGrid2D):
 
     
     def createGreensVolumeAnKit(self):
-        raise NotImplementedError
+        vol = self.grid.getCellVolume()
+        nx1 = self.grid.getGridDimensions()
+        dx = self.grid.getCellDimensions()
+        x_min = self.grid.getGridStart()
+        nx = nx1[0]
+        nz = nx1[1]
 
     def createGreensRecv(self):
         vol = self.grid.getCellVolume()
@@ -86,11 +96,11 @@ class greensRect2DCpu(dataGrid2D):
                     x = x_min[0]  + (0.5+t)*dx[0]
                     G_bound.data[nx_j + t] = vol * self.G_func(self.k, math.sqrt((x-x_receiver)**2 + (z-z_receiver)**2))
 
-            self.gRecv.append(G_bound)
+            self.gRecv.append(copy.deepcopy(G_bound))
 
 
     def deleteGreensRecv(self):
         self.gRecv = []
 
     def getReceiverCont(self, iRecv):
-        return self.gRecv[iRecv]
+        return copy.deepcopy(self.gRecv[iRecv])

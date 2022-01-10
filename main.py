@@ -37,6 +37,7 @@ def main():
     model = FiniteDifferenceForwardModel(grid,source,receiver,freq,None)
     
     inverse = ConjugateGradientInversion(None,model,input_data)
+    input_data["max"] = 50
 
     inverse.reconstruct(referencePressureData, input_data)
     
