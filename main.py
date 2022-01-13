@@ -15,9 +15,7 @@ def main():
     arguments = parse_args()
     
     print(arguments)
-
-    
-    
+   
     referencePressureData = []
 
     with open(arguments.dir+"output/"+input_data["fileName"]+"InvertedChiToPressure.txt") as f:
@@ -26,16 +24,14 @@ def main():
             referencePressureData.append(complex(float(c[0]),float(c[1])))
 
     inverse = ConjugateGradientInversion(None,model,input_data)
+    
     input_data["max"] = 50
 
     chi = inverse.reconstruct(referencePressureData, input_data)
-    with open(arguments.dir+"output/chi20.txt","w") as f:
+    
+    with open(arguments.dir+"output/chi_result.txt","w") as f:
         for i in chi.data:
             f.write(str(i)+"\n")
-        
-
- 
-
 
 def parse_args():
     #configure argument parser

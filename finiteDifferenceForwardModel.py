@@ -7,7 +7,7 @@ import copy
 
 
 class FiniteDifferenceForwardModel():
-    def __init__(self,grid,source,receiver,freq,fmInput) -> None:
+    def __init__(self,grid,source,receiver,freq,fmInput,accelerated) -> None:
         
         self.wrapper = Wrapper()
 
@@ -22,6 +22,7 @@ class FiniteDifferenceForwardModel():
         self.Greens = []
         self.vpTot = []
         self.residual = []
+        self.accelerated = accelerated
 
         self.createGreens()
         self.createKappa(self.freq,self.source,self.receiver)

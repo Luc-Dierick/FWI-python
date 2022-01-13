@@ -205,6 +205,8 @@ class ConjugateGradientInversion():
         g = ((2.0 * b**3 / a**3) -(9.0*b*c / a**2) + (27.0 * d/a)) / 27.0
         h = (g**2 / 4.0) + f**3  / 27.0
         r = -(g/2.0) + np.sqrt(h)
+        print(r)
+        print(r.type)
         s = np.cbrt(r)
         t = -(g/2.0) - np.sqrt(h)
         u = np.cbrt(t)
