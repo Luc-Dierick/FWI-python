@@ -1,8 +1,8 @@
 
 from numpy.lib.function_base import gradient
-from finiteDifferenceForwardModel import FiniteDifferenceForwardModel
-from regularization import RegularisationParameters
-from dataGrid2D import dataGrid2D
+from .finiteDifferenceForwardModel import FiniteDifferenceForwardModel
+from .regularization import RegularisationParameters
+from .dataGrid2D import dataGrid2D
 import numpy as np
 import copy
 
