@@ -16,31 +16,23 @@ def main():
     
     print(arguments)
 
-    inputfile = open(arguments.dir+"input/GenericInput.json")
-
-    input_data = json.load(inputfile)
-
-    grid = grid2D([input_data["reservoirTopLeft"]["x"],input_data["reservoirTopLeft"]["z"]], [input_data["reservoirBottomRight"]["x"],input_data["reservoirBottomRight"]["z"]], [input_data["ngrid"]["x"],input_data["ngrid"]["z"]])
-    source = Sources([input_data["sourcesTopLeft"]["x"],input_data["sourcesTopLeft"]["z"]], [input_data["sourcesBottomRight"]["x"],input_data["sourcesBottomRight"]["z"]], input_data["nSources"])
-    receiver = Receivers([input_data["receiversTopLeft"]["x"],input_data["receiversTopLeft"]["z"]], [input_data["receiversBottomRight"]["x"],input_data["receiversBottomRight"]["z"]], input_data["nSources"])
-    freq = frequenciesGroup(input_data["Freq"],input_data["c_0"])
-
-    magnitude = source.count * freq.count * receiver.count
-
+    
+    
     referencePressureData = []
 
     with open(arguments.dir+"output/"+input_data["fileName"]+"InvertedChiToPressure.txt") as f:
         for line in f:
             c = line.split(",")
             referencePressureData.append(complex(float(c[0]),float(c[1])))
-    
-    model = FiniteDifferenceForwardModel(grid,source,receiver,freq,None)
-    
+
     inverse = ConjugateGradientInversion(None,model,input_data)
     input_data["max"] = 50
 
-    inverse.reconstruct(referencePressureData, input_data)
-    
+    chi = inverse.reconstruct(referencePressureData, input_data)
+    with open(arguments.dir+"output/chi20.txt","w") as f:
+        for i in chi.data:
+            f.write(str(i)+"\n")
+        
 
  
 

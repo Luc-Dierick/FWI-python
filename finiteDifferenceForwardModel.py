@@ -80,7 +80,7 @@ class FiniteDifferenceForwardModel():
                     v = copy.deepcopy(self.vpTot[i * self.source.count + k])
 
                     self.vkappa[li+lj+k] = d*v
-
+  
 
 
     def calculatePressureField(self, chiEst):
