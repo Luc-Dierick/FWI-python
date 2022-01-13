@@ -120,11 +120,9 @@ class ConjugateGradientInversion():
 
 
     def calculateRegularisationErrorFunctional(self, regularisationPrevious, regularisationCurrent):
-        gradientChiNormsquaredCurrent = self.add_data_grid(self.mult_data_grid(regularisationCurrent.gradientChi[0], regularisationCurrent.gradientChi[0]),
-                                        self.mult_data_grid(regularisationCurrent.gradientChi[1],regularisationCurrent.gradientChi[1]))
+        gradientChiNormsquaredCurrent = (regularisationCurrent.gradientChi[0]* regularisationCurrent.gradientChi[0])+(regularisationCurrent.gradientChi[1]*regularisationCurrent.gradientChi[1])
 
-        integral = self.div_data_grid((gradientChiNormsquaredCurrent + regularisationPrevious.deltaSquared),
-                                            regularisationPrevious.gradientChiNormSquared + regularisationPrevious.deltaSquared)
+        integral = (gradientChiNormsquaredCurrent + regularisationPrevious.deltaSquared) / (regularisationPrevious.gradientChiNormSquared + regularisationPrevious.deltaSquared)
 
         regularisationPrevious.errorFunctional = (1.0 / (self.grid.getDomainArea())) * integral.summation() * self.grid.getCellVolume()
 
@@ -156,20 +154,20 @@ class ConjugateGradientInversion():
             a2 += eta * (np.conjugate(kappaTimesZeta[i])*kappaTimesZeta[i]).real
         
 
-        bGradientChiSquaredXDirection = self.mult_data_grid((self.mult_data_grid(regularisationCurrent.b, regularisationPrevious.gradientChi[0])), self.mult_data_grid(regularisationCurrent.b,regularisationPrevious.gradientChi[0]))
-        bGradientChiSquaredZDirection = self.mult_data_grid((self.mult_data_grid(regularisationCurrent.b, regularisationPrevious.gradientChi[1])), self.mult_data_grid(regularisationCurrent.b,regularisationPrevious.gradientChi[1]))
+        bGradientChiSquaredXDirection = regularisationCurrent.b * regularisationPrevious.gradientChi[0] * regularisationCurrent.b * regularisationPrevious.gradientChi[0]
+        bGradientChiSquaredZDirection = regularisationCurrent.b * regularisationPrevious.gradientChi[1] * regularisationCurrent.b *regularisationPrevious.gradientChi[1]
        
         b0 = ((bGradientChiSquaredXDirection.summation() + bGradientChiSquaredZDirection.summation()) + regularisationPrevious.deltaSquared * regularisationCurrent.bSquared.summation()) * self.grid.getCellVolume()
 
         gradientZeta = [dataGrid2D(self.grid),dataGrid2D(self.grid)]
         zeta.gradient(gradientZeta)
 
-        bGradientZetabGradientChiX = self.mult_data_grid(self.mult_data_grid(regularisationCurrent.b, gradientZeta[0]), self.mult_data_grid(regularisationCurrent.b , regularisationPrevious.gradientChi[0]))
-        bGradientZetabGradientChiZ = self.mult_data_grid(self.mult_data_grid(regularisationCurrent.b, gradientZeta[1]), self.mult_data_grid(regularisationCurrent.b , regularisationPrevious.gradientChi[1]))
+        bGradientZetabGradientChiX = regularisationCurrent.b * gradientZeta[0] * regularisationCurrent.b * regularisationPrevious.gradientChi[0]
+        bGradientZetabGradientChiZ = regularisationCurrent.b * gradientZeta[1] * regularisationCurrent.b * regularisationPrevious.gradientChi[1]
         b1 = 2.0 * (bGradientZetabGradientChiX.summation() + bGradientZetabGradientChiZ.summation()) * self.grid.getCellVolume()
 
-        bTimesGradientZetaXdirection = self.mult_data_grid(regularisationCurrent.b,gradientZeta[0])
-        bTimesGradientZetaZdirection = self.mult_data_grid(regularisationCurrent.b , gradientZeta[1])
+        bTimesGradientZetaXdirection = regularisationCurrent.b * gradientZeta[0]
+        bTimesGradientZetaZdirection = regularisationCurrent.b * gradientZeta[1]
         bTimesGradientZetaXdirection.square()
         bTimesGradientZetaZdirection.square()
         b2 = (bTimesGradientZetaXdirection.summation() + bTimesGradientZetaZdirection.summation()) * self.grid.getCellVolume()
@@ -180,25 +178,6 @@ class ConjugateGradientInversion():
         derD = a1 * b0 + a0 * b1
 
         return self.findRealRoolFromCubic(derA, derB, derC, derD)
-
-    def mult_data_grid(self,a,b):
-        res = dataGrid2D(self.grid)
-        for i in range(len(a.data)):
-            res.data[i] = a.data[i] * b.data[i]
-        return res
-
-    def add_data_grid(self,a,b):
-        res = dataGrid2D(self.grid)
-        for i in range(len(a.data)):
-            res.data[i] = a.data[i] + b.data[i]
-        return res
-    def div_data_grid(self,a,b):
-        res = dataGrid2D(self.grid)
-        for i in range(len(a.data)):
-            res.data[i] = a.data[i] / b.data[i]
-        return res
-
-    
 
     def findRealRoolFromCubic(self, a,b,c,d):
         f = ((3.0 * c / a) - (b**2 / a**2)) / 3.0
@@ -232,7 +211,7 @@ class ConjugateGradientInversion():
                 temp.data = zeta
                 zeta = temp
                 
-            res = self.add_data_grid(gradientCurrent, self.mult_data_num(gamma,zeta))
+            res = gradientCurrent + self.mult_data_num(gamma,zeta)
             return res, gradientCurrent, gradientPrevious
 
     def mult_data_num(self,n,d):
@@ -242,7 +221,7 @@ class ConjugateGradientInversion():
         return res
 
     def sub_data_res(self,d, l):
-        res = dataGrid2D(self.grid)
+        res = dataGrid2D(self.grid,complex)
         for i in range(len(d.data)):
             res.data[i] = d.data[i] - l.data[i]
         return res
@@ -260,7 +239,7 @@ class ConjugateGradientInversion():
     def calculateRegularisationParameters(self, regularisationPrevious, regularisationCurrent, deltaAmplification):
         self.chiEstimate.gradient(regularisationPrevious.gradientChi)
         
-        regularisationPrevious.gradientChiNormSquared = self.add_data_grid( self.mult_data_grid(regularisationPrevious.gradientChi[0], regularisationPrevious.gradientChi[0]) , self.mult_data_grid(regularisationPrevious.gradientChi[1],regularisationPrevious.gradientChi[1]))
+        regularisationPrevious.gradientChiNormSquared = (regularisationPrevious.gradientChi[0] * regularisationPrevious.gradientChi[0]) + (regularisationPrevious.gradientChi[1] * regularisationPrevious.gradientChi[1])
 
         regularisationCurrent.bSquared = self.calculateWeightingFactor(regularisationPrevious);   
         regularisationCurrent.b = copy.deepcopy(regularisationCurrent.bSquared)
@@ -272,14 +251,15 @@ class ConjugateGradientInversion():
 
     def calculateWeightingFactor(self,regularisationPrevious):
         bsquared = regularisationPrevious.gradientChiNormSquared + regularisationPrevious.deltaSquared
-        bsquared.reciprocal()
+        print(bsquared)
+        bsquared.data = np.reciprocal(bsquared.data)
         bsquared.data = [x * (1.0/self.grid.getDomainArea()) for x in bsquared.data]
         return bsquared
 
     def calculateSteeringFactor(self,regularisationPrevious, regularisationCurrent, deltaAmplification):
-        bTimesGradientChiXSquared = self.mult_data_grid(regularisationCurrent.b , regularisationPrevious.gradientChi[0])
+        bTimesGradientChiXSquared = regularisationCurrent.b * regularisationPrevious.gradientChi[0]
         bTimesGradientChiXSquared.square()
-        bTimesGradientChiZSquared = self.mult_data_grid(regularisationCurrent.b, regularisationPrevious.gradientChi[1])
+        bTimesGradientChiZSquared = regularisationCurrent.b* regularisationPrevious.gradientChi[1]
         bTimesGradientChiZSquared.square()
 
         bTimesGradientChiNormSquared = (bTimesGradientChiXSquared + bTimesGradientChiZSquared).summation()
@@ -346,13 +326,12 @@ class ConjugateGradientInversion():
         res = [0] * len(a)
         for i in range(len(a)):
             res[i] = a[i] - b[i]
-
         return res
 
     def add(self, a, b):
-        for i in range(len(a.data)):
-            a.data[i] += b.data[i]
-        return a
+        res = dataGrid2D(self.grid,complex)
+        res = np.add(a,b)
+        return res
 
     def mult(self,a,b):
         for i in range(b.grid.getNumberOfGridPoints()):

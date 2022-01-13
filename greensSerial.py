@@ -1,5 +1,6 @@
 from grid2D import grid2D
 from dataGrid2D import dataGrid2D
+import numpy as np
 import math
 import copy
 
@@ -81,13 +82,12 @@ class greensRect2DCpu(dataGrid2D):
             x_receiver = self.receiver.xRecv[i][0]
             z_receiver = self.receiver.xRecv[i][1]
 
-            G_bound = dataGrid2D(self.grid)
+            G_bound = dataGrid2D(self.grid,datatype=complex)
+
 
             nx = self.grid.getGridDimensions()
             dx = self.grid.getCellDimensions()
             x_min = self.grid.getGridStart()
-
-            G_bound = dataGrid2D(self.grid)
             
             for j in range(nx[1]):
                 z = x_min[1] + (j+0.5)*dx[1]

@@ -88,7 +88,7 @@ class FiniteDifferenceForwardModel():
         return self.applyKappa(chiEst)
         
     def applyKappa(self, CurrentPressureFieldSerial):
-        kOperator = []
+        kOperator = []       
         for i in range(self.magnitude):
             kOperator.append(self.dotProduct(self.vkappa[i],CurrentPressureFieldSerial))
         return kOperator
