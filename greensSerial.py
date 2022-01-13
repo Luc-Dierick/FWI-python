@@ -14,7 +14,7 @@ class greensRect2DCpu(dataGrid2D):
         self.gRecv = []
         
         self.nx = self.grid.getGridDimensions()
-        self.gVol = [complex(0)] * ((2 * self.nx[1] - 1) * (2 * self.nx[0] - 1))
+        self.gVol = np.zeros(shape=((2 * self.nx[1] - 1) * (2 * self.nx[0] - 1)), dtype=complex) 
 
         self.createGreensVolume()
 
