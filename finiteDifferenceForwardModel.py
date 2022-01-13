@@ -1,8 +1,8 @@
 import math
-from dataGrid2D import dataGrid2D
-from grid2D import grid2D
-from greensSerial import greensRect2DCpu
-from wrapper import Wrapper
+from .dataGrid2D import dataGrid2D
+from .grid2D import grid2D
+from .greensSerial import greensRect2DCpu
+from .wrapper import Wrapper
 import copy
 
 

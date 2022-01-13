@@ -1,6 +1,8 @@
 from ctypes import cdll
 from ctypes import c_double
-lib = cdll.LoadLibrary('/home/luc/Documents/FWI-python/neumann.so')
+pynq = '/home/xilinx/jupyter_notebooks/PYNQ-FWI/FWI_python/neuman.so' #32 bit compiled.
+wsl  = '/home/luc/Documents/FWI-python/neuman.so'
+lib = cdll.LoadLibrary(pynq)
  
 class Wrapper(object):
     def __init__(self):
