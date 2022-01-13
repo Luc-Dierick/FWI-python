@@ -16,8 +16,8 @@ def main():
     
     print(arguments)
 
-    # inputfile = open(arguments.dir+"input/GenericInput.json")
-    arguments.dir ="/home/lucdierick/FWI-python/default/"
+    #arguments.dir ="/home/lucdierick/FWI-python/default/"
+    
     inputfile = open(arguments.dir+"input/GenericInput.json")
 
 

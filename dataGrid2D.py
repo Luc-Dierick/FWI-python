@@ -8,12 +8,12 @@ class dataGrid2D():
     def __init__(self,grid:grid2D,datatype=np.float64) -> None:
         self.grid = grid
         self.data = np.zeros(shape=self.grid._nGridPoints,dtype=datatype) #[0.0] * self.grid._nGridPoints
-
+        self.datatype = datatype
     def getData(self):
         return self.data
 
     def zero(self):
-        self.data =  np.zeros(shape=self.grid._nGridPoints,dtype=np.complex)
+        self.data =  np.zeros(shape=self.grid._nGridPoints,dtype=self.datatype)
 
     def square(self):
         self.data = np.square(self.data)
@@ -56,8 +56,8 @@ class dataGrid2D():
 
     def gradient(self, gradientField):
         
-        gradientField[0].data = gradientField[0].data.astype('complex')
-        gradientField[1].data = gradientField[1].data.astype('complex')
+        gradientField[0].data = gradientField[0].data.astype(self.data.dtype)
+        gradientField[1].data = gradientField[1].data.astype(self.data.dtype)
         nx = self.grid.getGridDimensions()
         dx = self.grid.getCellDimensions()
 
@@ -73,9 +73,6 @@ class dataGrid2D():
                     gradientDx = (self.data[i * nx[0] + j + 1] - self.data[i * nx[0] + j - 1]) / (2.0 * dx[0])
                 
                 gradientField[0].data[index] = copy.deepcopy(gradientDx)
-                # print(index)
-                # print(gradientDx)
-                # print( gradientField[0].data[0] )
 
                 gradientDz = None
                 if(i == 0):

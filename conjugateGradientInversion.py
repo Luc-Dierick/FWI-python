@@ -1,8 +1,8 @@
 
 from numpy.lib.function_base import gradient
-from .finiteDifferenceForwardModel import FiniteDifferenceForwardModel
-from .regularization import RegularisationParameters
-from .dataGrid2D import dataGrid2D
+from finiteDifferenceForwardModel import FiniteDifferenceForwardModel
+from regularization import RegularisationParameters
+from dataGrid2D import dataGrid2D
 import numpy as np
 import copy
 
@@ -20,7 +20,7 @@ class ConjugateGradientInversion():
         self.magnitude = self.frequencies.count * self.sources.count * self.receivers.count
 
     def calculateCost(self, pData, pDataEst, eta):
-        return eta * self.l2NormSquared(self.sub(pData,pDataEst))
+        return eta * self.l2NormSquared(np.subtract(pData,pDataEst))
 
     def l2NormSquared(self, a):
         initialvalue = 0.0
@@ -62,7 +62,7 @@ class ConjugateGradientInversion():
         pDataEst = self.forwardModel.calculatePressureField(self.chiEstimate)
 
         
-        residualVector = self.sub(pData, pDataEst)
+        residualVector = np.subtract(pData, pDataEst)
 
         
         residualCurrent = self.calculateCost(pData, pDataEst, eta)
@@ -71,7 +71,7 @@ class ConjugateGradientInversion():
         alpha = self.calculateStepSize(zeta, residualVector)
 
 
-        self.chiEstimate = self.chiEstimate + (self.mult_list(alpha, zeta))
+        self.chiEstimate = self.chiEstimate + (np.multiply(alpha, zeta))
         
         gradientPrevious = copy.deepcopy(gradientCurrent)
         residualPrevious = copy.deepcopy(residualCurrent)
@@ -82,7 +82,7 @@ class ConjugateGradientInversion():
         for i in range(gInput["max"]):
             # Calculate the pressure data from chiEstimate
             pDataEst = self.forwardModel.calculatePressureField(self.chiEstimate)
-            residualVector = self.sub(pData, pDataEst)
+            residualVector = np.subtract(pData, pDataEst)
 
             # Check residual
             residualCurrent = self.calculateCost(pData, pDataEst, eta)
@@ -198,43 +198,21 @@ class ConjugateGradientInversion():
             kappaTimesResidual = dataGrid2D(self.grid)
             kappaTimesResidual.zero()
             kappaTimesResidual = self.getUpdateDirectionInformation(residualVector, kappaTimesResidual)
-            gradientCurrent = self.add_list_datagrid(self.mult_num_list(eta,self.mult_list(regularisationPrevious.errorFunctional, kappaTimesResidual.getRealPart())), regularisationCurrent.gradient * residualPrevious);   
+            gradientCurrent = (regularisationCurrent.gradient * residualPrevious) + np.multiply(eta*regularisationPrevious.errorFunctional, kappaTimesResidual.getRealPart());   
 
             if not isinstance(gradientPrevious,dataGrid2D):
                 temp = dataGrid2D(self.grid)
                 temp.data = gradientPrevious
                 gradientPrevious = temp
             
-            gamma = gradientCurrent.innerProduct(self.sub_data_res(gradientCurrent,gradientPrevious)) / gradientPrevious.innerProduct(gradientPrevious);   
+            gamma = gradientCurrent.innerProduct(np.subtract(gradientCurrent,gradientPrevious)) / gradientPrevious.innerProduct(gradientPrevious);   
             if not isinstance(zeta, dataGrid2D):
                 temp = dataGrid2D(self.grid)
                 temp.data = zeta
                 zeta = temp
                 
-            res = gradientCurrent + self.mult_data_num(gamma,zeta)
+            res = gradientCurrent + (zeta*gamma)
             return res, gradientCurrent, gradientPrevious
-
-    def mult_data_num(self,n,d):
-        res = dataGrid2D(self.grid)
-        for i in range(len(d.data)):
-            res.data[i] = d.data[i] * n
-        return res
-
-    def sub_data_res(self,d, l):
-        res = dataGrid2D(self.grid,complex)
-        for i in range(len(d.data)):
-            res.data[i] = d.data[i] - l.data[i]
-        return res
-
-    def add_list_datagrid(self,l,d):
-        for i in range(len(d.data)):
-            d.data[i] += l[i]
-        return d
-
-    def mult_num_list(self,a,b):
-        for i in range(len(b)):
-            b[i] *= a
-        return b
 
     def calculateRegularisationParameters(self, regularisationPrevious, regularisationCurrent, deltaAmplification):
         self.chiEstimate.gradient(regularisationPrevious.gradientChi)
@@ -251,7 +229,6 @@ class ConjugateGradientInversion():
 
     def calculateWeightingFactor(self,regularisationPrevious):
         bsquared = regularisationPrevious.gradientChiNormSquared + regularisationPrevious.deltaSquared
-        print(bsquared)
         bsquared.data = np.reciprocal(bsquared.data)
         bsquared.data = [x * (1.0/self.grid.getDomainArea()) for x in bsquared.data]
         return bsquared
@@ -298,7 +275,7 @@ class ConjugateGradientInversion():
     def calculateUpdateDirection(self, residualVector, gradientCurrent, eta):
         kappaTimesResidual = dataGrid2D(self.grid)
         kappaTimesResidual = self.getUpdateDirectionInformation(residualVector, kappaTimesResidual)
-        gradientCurrent =  self.mult_list(eta,kappaTimesResidual.getRealPart())
+        gradientCurrent =  np.multiply(eta,kappaTimesResidual.getRealPart())
 
         return gradientCurrent
 
@@ -319,32 +296,10 @@ class ConjugateGradientInversion():
                     dummy = kappa[l_i + l_j + k]
                     dummy.conjugate()
     
-                    kappaTimesResidual = kappaTimesResidual + self.mult(residualVector[l_i + l_j + k], dummy)
+                    kappaTimesResidual = kappaTimesResidual + np.multiply(residualVector[l_i + l_j + k],dummy.data)
         return kappaTimesResidual
 
-    def sub(self,a,b):
-        res = [0] * len(a)
-        for i in range(len(a)):
-            res[i] = a[i] - b[i]
-        return res
 
-    def add(self, a, b):
-        res = dataGrid2D(self.grid,complex)
-        res = np.add(a,b)
-        return res
-
-    def mult(self,a,b):
-        for i in range(b.grid.getNumberOfGridPoints()):
-            c1 =  complex(b.data[i].real, -1*b.data[i].imag)
-            c2 =  complex(a.real, a.imag)
-            c1 *= c2
-            b.data[i] = c1
-            
-
-
-        return b
-            
-            
 
         
             
