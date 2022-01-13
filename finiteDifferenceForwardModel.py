@@ -121,5 +121,4 @@ class FiniteDifferenceForwardModel():
         for i in range(lhs.grid.getNumberOfGridPoints()):
 
             sum += lhs.data[i] * rhsData[i]
-
         return sum

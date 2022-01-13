@@ -15,4 +15,3 @@ class Wrapper(object):
     
     def cyl_bessel_j(self, a, b):
         return lib.Wrapped_cyl_bessel_j(self.obj, c_double(a), c_double(b))
-      
