@@ -5,32 +5,26 @@ import numpy as np
 import copy
 
 class dataGrid2D():
-    def __init__(self,grid:grid2D) -> None:
+    def __init__(self,grid:grid2D,datatype=np.float64) -> None:
         self.grid = grid
-        self.data = [0.0] * self.grid._nGridPoints
-
+        self.data = np.zeros(shape=self.grid._nGridPoints,dtype=datatype) #[0.0] * self.grid._nGridPoints
+        self.datatype = datatype
     def getData(self):
         return self.data
 
     def zero(self):
-        self.data = [0.0] * self.grid._nGridPoints
+        self.data =  np.zeros(shape=self.grid._nGridPoints,dtype=self.datatype)
 
     def square(self):
-        self.data = [x*x for x in self.data]
+        self.data = np.square(self.data)
 
     def sqrt(self):
-        self.data = [math.sqrt(x) for x in self.data]
+        self.data = np.sqrt(self.data)
 
-    def reciprocal(self):
-        for i in range(len(self.data)):
-            if self.data[i] == 0:
-                raise "exception, reciprocal divides by zero"
-            self.data[i] = 1.0 / self.data[i]
-
+   
     def conjugate(self):
-        for i in self.data:
-            i = np.conj(i)
-
+        self.data = np.conj(self.data)
+    
     def random(self):
         raise NotImplementedError
 
@@ -61,6 +55,9 @@ class dataGrid2D():
         raise NotImplementedError
 
     def gradient(self, gradientField):
+        
+        gradientField[0].data = gradientField[0].data.astype(self.data.dtype)
+        gradientField[1].data = gradientField[1].data.astype(self.data.dtype)
         nx = self.grid.getGridDimensions()
         dx = self.grid.getCellDimensions()
 
@@ -76,9 +73,6 @@ class dataGrid2D():
                     gradientDx = (self.data[i * nx[0] + j + 1] - self.data[i * nx[0] + j - 1]) / (2.0 * dx[0])
                 
                 gradientField[0].data[index] = copy.deepcopy(gradientDx)
-                # print(index)
-                # print(gradientDx)
-                # print( gradientField[0].data[0] )
 
                 gradientDz = None
                 if(i == 0):
@@ -99,45 +93,36 @@ class dataGrid2D():
     def __truediv__(self, rhs):
         res = dataGrid2D(self.grid)
         if isinstance(rhs,dataGrid2D):
-            for i in range(len(self.data)):
-                res.data[i] = self.data[i] / rhs.data[i]
+            res.data = np.true_divide(self.data, rhs.data)
         else:
-            for i in range(len(self.data)):
-                res.data[i] = self.data[i] / rhs
-
+            res.data = np.true_divide(self.data,rhs)
+            
         return res
             
     def __mul__(self,rhs):
         res = dataGrid2D(self.grid)
         if isinstance(rhs,dataGrid2D):
-            for i in range(len(self.data)):
-                res.data[i] = self.data[i] * rhs.data[i]
+            res.data = np.multiply(self.data,rhs.data)
         else:
-            for i in range(len(self.data)):
-                res.data[i] = self.data[i]* rhs
+            res.data = np.multiply(self.data,rhs)
         return res
             
     def __sub__(self,rhs):
         res = dataGrid2D(self.grid)
         if isinstance(rhs,dataGrid2D):
-            for i in range(len(self.data)):
-                res.data[i] = self.data[i] - rhs.data[i]
+            res.data = np.subtract(self.data,rhs.data)
         else:
-            for i in range(len(self.data)):
-                res.data[i] = self.data[i] - rhs
+            res.data = np.subtract(self.data, rhs)
         return res
 
     def __add__(self,rhs):
         res = dataGrid2D(self.grid)
         if isinstance(rhs,dataGrid2D):
-            for i in range(len(self.data)):
-                res.data[i] = self.data[i] + rhs.data[i]
+            res.data = np.add(self.data, rhs.data)
         else:
             if isinstance(rhs,List):
-                for i in range(len(rhs)):
-                    res.data[i] = self.data[i] + rhs[i]
+                res.data = np.add(self.data,rhs)
             else:
-                for i in range(len(self.data)):
-                    res.data[i] = self.data[i] + rhs
+                res.data = np.add(self.data,rhs)
 
         return res

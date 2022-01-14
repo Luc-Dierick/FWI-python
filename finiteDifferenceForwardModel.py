@@ -4,10 +4,13 @@ from .grid2D import grid2D
 from .greensSerial import greensRect2DCpu
 from .wrapper import Wrapper
 import copy
+from pynq import allocate
+import numpy as np
+import time
 
 
 class FiniteDifferenceForwardModel():
-    def __init__(self,grid,source,receiver,freq,fmInput,accelerated) -> None:
+    def __init__(self,grid,source,receiver,freq,fmInput,accelerated,d_vector_I_dma=None,d_matrix_IO_dma=None,u_vector_I_dma=None,u_kappa_IO_dma=None) -> None:
         
         self.wrapper = Wrapper()
 
@@ -22,13 +25,29 @@ class FiniteDifferenceForwardModel():
         self.Greens = []
         self.vpTot = []
         self.residual = []
-        self.accelerated = accelerated
-
+        
         self.createGreens()
         self.createKappa(self.freq,self.source,self.receiver)
 
         self.createPTot(freq,source)
         self.calculateKappa()
+
+        
+        self.accelerated = accelerated
+        #set up DMAs
+        self.d_vector_I_dma = d_vector_I_dma
+        self.d_matrix_IO_dma =d_matrix_IO_dma
+        self.u_vector_I_dma = u_vector_I_dma
+        self.u_kappa_IO_dma = u_kappa_IO_dma
+        
+        #set up buffers
+        self.kappa_buffer_PL = allocate(shape=(125,100), dtype=np.complex64)
+        self.CurrentPressureFieldSerial_buffer_PL = allocate(shape=(100,), dtype=np.float32)
+        self.kOperator_buffer_PL = allocate(shape=(125), dtype=np.complex64)
+        self.kappa_buffer_PL[:] = np.array([np.array(x.data) for x in self.vkappa])[:]
+        
+       
+        self.dot_time = 0
 
 
     def getKernel(self):
@@ -81,7 +100,7 @@ class FiniteDifferenceForwardModel():
                     v = copy.deepcopy(self.vpTot[i * self.source.count + k])
 
                     self.vkappa[li+lj+k] = d*v
-
+  
 
 
     def calculatePressureField(self, chiEst):
@@ -90,10 +109,30 @@ class FiniteDifferenceForwardModel():
         
     def applyKappa(self, CurrentPressureFieldSerial):
         kOperator = []
-        for i in range(self.magnitude):
-            kOperator.append(self.dotProduct(self.vkappa[i],CurrentPressureFieldSerial))
+        start_time = time.time()
+        cur = CurrentPressureFieldSerial
+        if isinstance(CurrentPressureFieldSerial,dataGrid2D):
+            cur = CurrentPressureFieldSerial.data   
+            
+        if self.accelerated:
+            self.CurrentPressureFieldSerial_buffer_PL[:] = cur[:]
+            self.dotProduct_HW(self.kappa_buffer_PL, self.CurrentPressureFieldSerial_buffer_PL, self.kOperator_buffer_PL)
+            kOperator[:] = self.kOperator_buffer_PL
+        else:
+            for i in range(self.magnitude):
+                kOperator.append(np.dot(self.vkappa[i].data,cur))
+        self.dot_time += time.time()-start_time
         return kOperator
 
+    def dotProduct_HW(self,matrix_in, vector_in, out):
+        self.d_vector_I_dma.sendchannel.transfer(vector_in)
+        self.d_matrix_IO_dma.sendchannel.transfer(matrix_in)
+        self.d_matrix_IO_dma.recvchannel.transfer(out)
+
+        self.d_vector_I_dma.sendchannel.wait()
+        self.d_matrix_IO_dma.sendchannel.wait()
+        self.d_matrix_IO_dma.recvchannel.wait()
+    
     def calculatePTot(self, chiEst):
         raise NotImplementedError
 
@@ -112,14 +151,3 @@ class FiniteDifferenceForwardModel():
     def getFreq(self):
         return self.freq
 
-
-    def dotProduct(self, lhs, rhs):
-        sum = 0
-        if isinstance(rhs,dataGrid2D):
-            rhsData = rhs.getData()
-        else:
-            rhsData = rhs
-        for i in range(lhs.grid.getNumberOfGridPoints()):
-
-            sum += lhs.data[i] * rhsData[i]
-        return sum

@@ -5,6 +5,8 @@ from .regularization import RegularisationParameters
 from .dataGrid2D import dataGrid2D
 import numpy as np
 import copy
+from pynq import allocate
+import time
 
 class ConjugateGradientInversion():
     
@@ -18,9 +20,24 @@ class ConjugateGradientInversion():
         self.frequencies = forwardModel.getFreq()
         self.chiEstimate = dataGrid2D(self.grid)
         self.magnitude = self.frequencies.count * self.sources.count * self.receivers.count
-
+        self.updtime = 0
+        self.dot_time = 0
+        if self.forwardModel.accelerated:
+            #set up DMAs
+            self.d_vector_I_dma = self.forwardModel.d_vector_I_dma
+            self.d_matrix_IO_dma =self.forwardModel.d_matrix_IO_dma
+            self.u_vector_I_dma = self.forwardModel.u_vector_I_dma
+            self.u_kappa_IO_dma = self.forwardModel.u_kappa_IO_dma
+            
+            #allocate contiguous memory for kappa and put kappa in there.
+            self.kappa_buffer_PL = allocate(shape=(125,100), dtype=np.complex64)
+            self.kappa_buffer_PL[:] = np.array([np.array(x.data) for x in self.forwardModel.getKernel()])[:]
+                     
+            self.residualVector_buffer_PL = allocate(shape=(125,),dtype=np.complex64)
+            self.kappaTimesResidual_buffer_PL = allocate(shape=(100), dtype=np.complex64)
+        
     def calculateCost(self, pData, pDataEst, eta):
-        return eta * self.l2NormSquared(self.sub(pData,pDataEst))
+        return eta * self.l2NormSquared(np.subtract(pData,pDataEst))
 
     def l2NormSquared(self, a):
         initialvalue = 0.0
@@ -28,11 +45,6 @@ class ConjugateGradientInversion():
             initialvalue += (i.real * i.real + i.imag * i.imag)
 
         return initialvalue
-
-    def complex_add(self,a,b):
-        for i in range(len(a)):
-            a[i] += b[i]
-        return b
 
     def reconstruct(self, pData, gInput):
 
@@ -62,7 +74,7 @@ class ConjugateGradientInversion():
         pDataEst = self.forwardModel.calculatePressureField(self.chiEstimate)
 
         
-        residualVector = self.sub(pData, pDataEst)
+        residualVector = np.subtract(pData, pDataEst)
 
         
         residualCurrent = self.calculateCost(pData, pDataEst, eta)
@@ -71,7 +83,7 @@ class ConjugateGradientInversion():
         alpha = self.calculateStepSize(zeta, residualVector)
 
 
-        self.chiEstimate = self.chiEstimate + (self.mult_list(alpha, zeta))
+        self.chiEstimate = self.chiEstimate + (np.multiply(alpha, zeta))
         
         gradientPrevious = copy.deepcopy(gradientCurrent)
         residualPrevious = copy.deepcopy(residualCurrent)
@@ -82,7 +94,7 @@ class ConjugateGradientInversion():
         for i in range(gInput["max"]):
             # Calculate the pressure data from chiEstimate
             pDataEst = self.forwardModel.calculatePressureField(self.chiEstimate)
-            residualVector = self.sub(pData, pDataEst)
+            residualVector = np.subtract(pData, pDataEst)
 
             # Check residual
             residualCurrent = self.calculateCost(pData, pDataEst, eta)
@@ -120,19 +132,28 @@ class ConjugateGradientInversion():
 
 
     def calculateRegularisationErrorFunctional(self, regularisationPrevious, regularisationCurrent):
-        gradientChiNormsquaredCurrent = self.add_data_grid(self.mult_data_grid(regularisationCurrent.gradientChi[0], regularisationCurrent.gradientChi[0]),
-                                        self.mult_data_grid(regularisationCurrent.gradientChi[1],regularisationCurrent.gradientChi[1]))
+        gradientChiNormsquaredCurrent = (regularisationCurrent.gradientChi[0]* regularisationCurrent.gradientChi[0])+(regularisationCurrent.gradientChi[1]*regularisationCurrent.gradientChi[1])
 
-        integral = self.div_data_grid((gradientChiNormsquaredCurrent + regularisationPrevious.deltaSquared),
-                                            regularisationPrevious.gradientChiNormSquared + regularisationPrevious.deltaSquared)
+        integral = (gradientChiNormsquaredCurrent + regularisationPrevious.deltaSquared) / (regularisationPrevious.gradientChiNormSquared + regularisationPrevious.deltaSquared)
 
         regularisationPrevious.errorFunctional = (1.0 / (self.grid.getDomainArea())) * integral.summation() * self.grid.getCellVolume()
 
-    def calculateKappaTimesZeta(self, zeta, kernel):
-        kappa = self.forwardModel.getKernel()
-        for i in range(self.magnitude):
-            kernel[i] = self.dotProduct(kappa[i], zeta)
+    def calculateKappaTimesZeta(self, zeta):
+        kernel = [0] *(self.frequencies.count * self.sources.count * self.receivers.count)
+        start_time = time.time()
+        if self.forwardModel.accelerated:
+            self.forwardModel.CurrentPressureFieldSerial_buffer_PL[:] = zeta.data[:]
+            self.forwardModel.dotProduct_HW(self.forwardModel.kappa_buffer_PL, 
+                                            self.forwardModel.CurrentPressureFieldSerial_buffer_PL,
+                                            self.forwardModel.kOperator_buffer_PL)
+            kernel[:] = self.forwardModel.kOperator_buffer_PL[:]
+        else:
+            kappa = self.forwardModel.getKernel()
+            for i in range(self.magnitude):
+                kernel[i] = np.dot(kappa[i].data, zeta.data)
+
         
+        self.dot_time += time.time() - start_time
         return kernel
 
     def dotProduct(self,a,b):
@@ -142,9 +163,9 @@ class ConjugateGradientInversion():
         return prod
 
     def calculateStepSizeRegularisation(self, regularisationPrevious, regularisationCurrent, residualVector, eta, fDataPrevious, zeta):
-        kappaTimesZeta = [0] *(self.frequencies.count * self.sources.count * self.receivers.count)
+        
 
-        kappaTimesZeta = self.calculateKappaTimesZeta(zeta, kappaTimesZeta)
+        kappaTimesZeta = self.calculateKappaTimesZeta(zeta)
 
         a0 = fDataPrevious
 
@@ -156,20 +177,20 @@ class ConjugateGradientInversion():
             a2 += eta * (np.conjugate(kappaTimesZeta[i])*kappaTimesZeta[i]).real
         
 
-        bGradientChiSquaredXDirection = self.mult_data_grid((self.mult_data_grid(regularisationCurrent.b, regularisationPrevious.gradientChi[0])), self.mult_data_grid(regularisationCurrent.b,regularisationPrevious.gradientChi[0]))
-        bGradientChiSquaredZDirection = self.mult_data_grid((self.mult_data_grid(regularisationCurrent.b, regularisationPrevious.gradientChi[1])), self.mult_data_grid(regularisationCurrent.b,regularisationPrevious.gradientChi[1]))
+        bGradientChiSquaredXDirection = regularisationCurrent.b * regularisationPrevious.gradientChi[0] * regularisationCurrent.b * regularisationPrevious.gradientChi[0]
+        bGradientChiSquaredZDirection = regularisationCurrent.b * regularisationPrevious.gradientChi[1] * regularisationCurrent.b *regularisationPrevious.gradientChi[1]
        
         b0 = ((bGradientChiSquaredXDirection.summation() + bGradientChiSquaredZDirection.summation()) + regularisationPrevious.deltaSquared * regularisationCurrent.bSquared.summation()) * self.grid.getCellVolume()
 
         gradientZeta = [dataGrid2D(self.grid),dataGrid2D(self.grid)]
         zeta.gradient(gradientZeta)
 
-        bGradientZetabGradientChiX = self.mult_data_grid(self.mult_data_grid(regularisationCurrent.b, gradientZeta[0]), self.mult_data_grid(regularisationCurrent.b , regularisationPrevious.gradientChi[0]))
-        bGradientZetabGradientChiZ = self.mult_data_grid(self.mult_data_grid(regularisationCurrent.b, gradientZeta[1]), self.mult_data_grid(regularisationCurrent.b , regularisationPrevious.gradientChi[1]))
+        bGradientZetabGradientChiX = regularisationCurrent.b * gradientZeta[0] * regularisationCurrent.b * regularisationPrevious.gradientChi[0]
+        bGradientZetabGradientChiZ = regularisationCurrent.b * gradientZeta[1] * regularisationCurrent.b * regularisationPrevious.gradientChi[1]
         b1 = 2.0 * (bGradientZetabGradientChiX.summation() + bGradientZetabGradientChiZ.summation()) * self.grid.getCellVolume()
 
-        bTimesGradientZetaXdirection = self.mult_data_grid(regularisationCurrent.b,gradientZeta[0])
-        bTimesGradientZetaZdirection = self.mult_data_grid(regularisationCurrent.b , gradientZeta[1])
+        bTimesGradientZetaXdirection = regularisationCurrent.b * gradientZeta[0]
+        bTimesGradientZetaZdirection = regularisationCurrent.b * gradientZeta[1]
         bTimesGradientZetaXdirection.square()
         bTimesGradientZetaZdirection.square()
         b2 = (bTimesGradientZetaXdirection.summation() + bTimesGradientZetaZdirection.summation()) * self.grid.getCellVolume()
@@ -181,32 +202,11 @@ class ConjugateGradientInversion():
 
         return self.findRealRoolFromCubic(derA, derB, derC, derD)
 
-    def mult_data_grid(self,a,b):
-        res = dataGrid2D(self.grid)
-        for i in range(len(a.data)):
-            res.data[i] = a.data[i] * b.data[i]
-        return res
-
-    def add_data_grid(self,a,b):
-        res = dataGrid2D(self.grid)
-        for i in range(len(a.data)):
-            res.data[i] = a.data[i] + b.data[i]
-        return res
-    def div_data_grid(self,a,b):
-        res = dataGrid2D(self.grid)
-        for i in range(len(a.data)):
-            res.data[i] = a.data[i] / b.data[i]
-        return res
-
-    
-
     def findRealRoolFromCubic(self, a,b,c,d):
         f = ((3.0 * c / a) - (b**2 / a**2)) / 3.0
         g = ((2.0 * b**3 / a**3) -(9.0*b*c / a**2) + (27.0 * d/a)) / 27.0
         h = (g**2 / 4.0) + f**3  / 27.0
         r = -(g/2.0) + np.sqrt(h)
-        print(r)
-        print(r.type)
         s = np.cbrt(r)
         t = -(g/2.0) - np.sqrt(h)
         u = np.cbrt(t)
@@ -218,51 +218,27 @@ class ConjugateGradientInversion():
 
 
     def calculateUpdateDirectionRegularisation(self,residualVector, gradientCurrent, gradientPrevious, eta, regularisationCurrent, regularisationPrevious, zeta, residualPrevious):
-            kappaTimesResidual = dataGrid2D(self.grid)
-            kappaTimesResidual.zero()
-            kappaTimesResidual = self.getUpdateDirectionInformation(residualVector, kappaTimesResidual)
-            gradientCurrent = self.add_list_datagrid(self.mult_num_list(eta,self.mult_list(regularisationPrevious.errorFunctional, kappaTimesResidual.getRealPart())), regularisationCurrent.gradient * residualPrevious);   
+            kappaTimesResidual = self.getUpdateDirectionInformation(residualVector)
+            gradientCurrent = (regularisationCurrent.gradient * residualPrevious) + np.multiply(eta*regularisationPrevious.errorFunctional, kappaTimesResidual.getRealPart());   
 
             if not isinstance(gradientPrevious,dataGrid2D):
                 temp = dataGrid2D(self.grid)
                 temp.data = gradientPrevious
                 gradientPrevious = temp
             
-            gamma = gradientCurrent.innerProduct(self.sub_data_res(gradientCurrent,gradientPrevious)) / gradientPrevious.innerProduct(gradientPrevious);   
+            gamma = gradientCurrent.innerProduct(np.subtract(gradientCurrent,gradientPrevious)) / gradientPrevious.innerProduct(gradientPrevious);   
             if not isinstance(zeta, dataGrid2D):
                 temp = dataGrid2D(self.grid)
                 temp.data = zeta
                 zeta = temp
                 
-            res = self.add_data_grid(gradientCurrent, self.mult_data_num(gamma,zeta))
+            res = gradientCurrent + (zeta*gamma)
             return res, gradientCurrent, gradientPrevious
-
-    def mult_data_num(self,n,d):
-        res = dataGrid2D(self.grid)
-        for i in range(len(d.data)):
-            res.data[i] = d.data[i] * n
-        return res
-
-    def sub_data_res(self,d, l):
-        res = dataGrid2D(self.grid)
-        for i in range(len(d.data)):
-            res.data[i] = d.data[i] - l.data[i]
-        return res
-
-    def add_list_datagrid(self,l,d):
-        for i in range(len(d.data)):
-            d.data[i] += l[i]
-        return d
-
-    def mult_num_list(self,a,b):
-        for i in range(len(b)):
-            b[i] *= a
-        return b
 
     def calculateRegularisationParameters(self, regularisationPrevious, regularisationCurrent, deltaAmplification):
         self.chiEstimate.gradient(regularisationPrevious.gradientChi)
         
-        regularisationPrevious.gradientChiNormSquared = self.add_data_grid( self.mult_data_grid(regularisationPrevious.gradientChi[0], regularisationPrevious.gradientChi[0]) , self.mult_data_grid(regularisationPrevious.gradientChi[1],regularisationPrevious.gradientChi[1]))
+        regularisationPrevious.gradientChiNormSquared = (regularisationPrevious.gradientChi[0] * regularisationPrevious.gradientChi[0]) + (regularisationPrevious.gradientChi[1] * regularisationPrevious.gradientChi[1])
 
         regularisationCurrent.bSquared = self.calculateWeightingFactor(regularisationPrevious);   
         regularisationCurrent.b = copy.deepcopy(regularisationCurrent.bSquared)
@@ -274,14 +250,14 @@ class ConjugateGradientInversion():
 
     def calculateWeightingFactor(self,regularisationPrevious):
         bsquared = regularisationPrevious.gradientChiNormSquared + regularisationPrevious.deltaSquared
-        bsquared.reciprocal()
+        bsquared.data = np.reciprocal(bsquared.data)
         bsquared.data = [x * (1.0/self.grid.getDomainArea()) for x in bsquared.data]
         return bsquared
 
     def calculateSteeringFactor(self,regularisationPrevious, regularisationCurrent, deltaAmplification):
-        bTimesGradientChiXSquared = self.mult_data_grid(regularisationCurrent.b , regularisationPrevious.gradientChi[0])
+        bTimesGradientChiXSquared = regularisationCurrent.b * regularisationPrevious.gradientChi[0]
         bTimesGradientChiXSquared.square()
-        bTimesGradientChiZSquared = self.mult_data_grid(regularisationCurrent.b, regularisationPrevious.gradientChi[1])
+        bTimesGradientChiZSquared = regularisationCurrent.b* regularisationPrevious.gradientChi[1]
         bTimesGradientChiZSquared.square()
 
         bTimesGradientChiNormSquared = (bTimesGradientChiXSquared + bTimesGradientChiZSquared).summation()
@@ -318,9 +294,8 @@ class ConjugateGradientInversion():
         return alpha
 
     def calculateUpdateDirection(self, residualVector, gradientCurrent, eta):
-        kappaTimesResidual = dataGrid2D(self.grid)
-        kappaTimesResidual = self.getUpdateDirectionInformation(residualVector, kappaTimesResidual)
-        gradientCurrent =  self.mult_list(eta,kappaTimesResidual.getRealPart())
+        kappaTimesResidual = self.getUpdateDirectionInformation(residualVector)
+        gradientCurrent =  np.multiply(eta,kappaTimesResidual.getRealPart())
 
         return gradientCurrent
 
@@ -330,44 +305,39 @@ class ConjugateGradientInversion():
             res[i] = b[i] * a
         return res
 
-    def getUpdateDirectionInformation(self, residualVector, kappaTimesResidual):
-        kappaTimesResidual.zero()
-        kappa = self.forwardModel.getKernel()
-        for i in range(self.frequencies.count):
-            l_i = i * self.receivers.count * self.sources.count
-            for j in range(self.receivers.count):
-                l_j = j* self.receivers.count
-                for k in range(self.receivers.count):
-                    dummy = kappa[l_i + l_j + k]
-                    dummy.conjugate()
-    
-                    kappaTimesResidual = kappaTimesResidual + self.mult(residualVector[l_i + l_j + k], dummy)
+    def getUpdateDirectionInformation(self, residualVector):
+        kappaTimesResidual = dataGrid2D(self.grid,complex)
+        start_time = time.time()
+        if self.forwardModel.accelerated:
+            self.residualVector_buffer_PL[:] = residualVector[:]
+            self.updateDirection_HW(self.residualVector_buffer_PL, self.kappa_buffer_PL, self.kappaTimesResidual_buffer_PL)
+            kappaTimesResidual.data[:] = self.kappaTimesResidual_buffer_PL
+        else:
+            kappaTimesResidual.zero()
+            kappa = self.forwardModel.getKernel()
+            for i in range(self.frequencies.count):
+                l_i = i * self.receivers.count * self.sources.count
+                for j in range(self.receivers.count):
+                    l_j = j* self.receivers.count
+                    for k in range(self.receivers.count):
+                        dummy = kappa[l_i + l_j + k]
+                        dummy.conjugate()
+
+                        kappaTimesResidual = kappaTimesResidual + np.multiply(residualVector[l_i + l_j + k],dummy.data)
+        self.updtime += time.time()-start_time
         return kappaTimesResidual
 
-    def sub(self,a,b):
-        res = [0] * len(a)
-        for i in range(len(a)):
-            res[i] = a[i] - b[i]
 
-        return res
+    def updateDirection_HW(self, update_in, update_kappa_in, s_out):
+        self.u_vector_I_dma.sendchannel.transfer(update_in)
+        self.u_kappa_IO_dma.sendchannel.transfer(update_kappa_in)
+        self.u_kappa_IO_dma.recvchannel.transfer(s_out)
 
-    def add(self, a, b):
-        for i in range(len(a.data)):
-            a.data[i] += b.data[i]
-        return a
-
-    def mult(self,a,b):
-        for i in range(b.grid.getNumberOfGridPoints()):
-            c1 =  complex(b.data[i].real, -1*b.data[i].imag)
-            c2 =  complex(a.real, a.imag)
-            c1 *= c2
-            b.data[i] = c1
-            
+        self.u_vector_I_dma.sendchannel.wait()
+        self.u_kappa_IO_dma.sendchannel.wait()
+        self.u_kappa_IO_dma.recvchannel.wait()
 
 
-        return b
-            
-            
 
         
             
