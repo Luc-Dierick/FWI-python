@@ -9,18 +9,53 @@ from FWI_python.receivers import Receivers
 from FWI_python.frequenciesGroup import frequenciesGroup
 from FWI_python.finiteDifferenceForwardModel import FiniteDifferenceForwardModel
 from FWI_python.conjugateGradientInversion import ConjugateGradientInversion
-
+import os
 
 class Processor():
-    def __init__(self,accelerated=False):
-        self.accelerated = accelerated
-       
-    def process(self,dir,d_vector_I_dma,d_matrix_IO_dma,u_vector_I_dma,u_kappa_IO_dma):
+    def __init__(self):
+        self.dir = "/home/xilinx/jupyter_notebooks/PYNQ-FWI/FWI_python/default/"
+        
+        
+        
+    def process_arm(self):
+        self.accelerated = False
+        self.dir = "/home/xilinx/jupyter_notebooks/PYNQ-FWI/FWI_python/arm/"
+        chi_estimate, model, inverse, total_time = self.process()
+         
+        with open(self.dir+"output/chi_est_10x10_100CPU.txt","w") as f:
+            for i in chi_estimate.data:
+                f.write(str(i)+"\n")
+
+        print(f"Dotproduct time ConjugateGradient: {inverse.dot_time}")
+        print(f"Dotproduct time FiniteDifference: {model.dot_time}")
+        print(f"UpdateGradient time: {inverse.updtime}")
+        print(F"Total time: {total_time} ")
+
+
+    def process_accelerated(self,d_vector_I_dma,d_matrix_IO_dma,u_vector_I_dma,u_kappa_IO_dma):
+        self.accelerated = True
+        self.dir = "/home/xilinx/jupyter_notebooks/PYNQ-FWI/FWI_python/accelerated/"
+        chi_estimate, model, inverse, total_time = self.process(d_vector_I_dma,d_matrix_IO_dma,u_vector_I_dma,u_kappa_IO_dma)
+                
+        with open(self.dir+"output/chi_est_10x10_100CPU.txt","w") as f:
+            for i in chi_estimate.data:
+                f.write(str(i)+"\n")
+                        
+        print(f"Dotproduct time ConjugateGradient: {inverse.dot_time}")
+        print(f"Dotproduct time FiniteDifference: {model.dot_time}")
+        print(f"UpdateGradient time: {inverse.updtime}")
+        print(F"Total time: {total_time} ")
+
+        
+                
+        with open(self.dir+"output/10x10_100CPU.pythonIn","w") as f:
+            f.write(f"This run was parametrized as follows: \nnxt   = 10\nnxt_original = 10\nnzt_original = 10\nTiming:\nTotal_time: {total_time}")       
+
+    def process(self,d_vector_I_dma=None,d_matrix_IO_dma=None,u_vector_I_dma=None,u_kappa_IO_dma=None):
                
-        inputfile = open(dir+"input/GenericInput.json")
+        inputfile = open(self.dir+"input/GenericInput.json")
         input_data = json.load(inputfile)
-        print(input_data)
-        input_data["max"] = 50
+        input_data["max"] = 100
 
         grid = grid2D([input_data["reservoirTopLeft"]["x"],input_data["reservoirTopLeft"]["z"]], [input_data["reservoirBottomRight"]["x"],input_data["reservoirBottomRight"]["z"]], [input_data["ngrid"]["x"],input_data["ngrid"]["z"]])
         source = Sources([input_data["sourcesTopLeft"]["x"],input_data["sourcesTopLeft"]["z"]], [input_data["sourcesBottomRight"]["x"],input_data["sourcesBottomRight"]["z"]], input_data["nSources"])
@@ -31,7 +66,7 @@ class Processor():
 
         referencePressureData = []
 
-        with open(dir+"output/"+input_data["fileName"]+"InvertedChiToPressure.txt") as f:
+        with open(self.dir+"output/"+input_data["fileName"]+"InvertedChiToPressure.txt") as f:
             for line in f:
                 c = line.split(",")
                 referencePressureData.append(complex(float(c[0]),float(c[1])))
@@ -42,16 +77,12 @@ class Processor():
 
         start_time = time.time()
         chi_estimate = inverse.reconstruct(referencePressureData, input_data)
-
-        print(f"Dotproduct time ConjugateGradient: {inverse.dot_time}")
-        print(f"Dotproduct time FiniteDifference: {model.dot_time}")
-        print(f"UpdateGradient time: {inverse.updtime}")
+        total_time = time.time() - start_time
+                    
+        return chi_estimate, model, inverse, total_time
         
-        print(f"Total time: {time.time()-start_time}")
- 
-        with open(dir+"output/chiRes_compare.txt","w") as f:
-            for i in chi_estimate.data:
-                f.write(str(i)+"\n")
+
+        
     
     def parse_args(self):
         #configure argument parser

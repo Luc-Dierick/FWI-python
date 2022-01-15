@@ -12,10 +12,19 @@ from .conjugateGradientInversion import ConjugateGradientInversion
 
 class Pre_processor():
     def __init__(self):
-        pass
+        self.dir = "/home/xilinx/jupyter_notebooks/PYNQ-FWI/FWI_python/arm/"
     
-    def process(self,dir,accelerated=False):
-        inputfile = open(dir+"input/GenericInput.json")
+    def process(self,accelerated=False):
+        print("Inverting observed data into modelled data...")
+
+        self.pre_process()
+        self.dir = "/home/xilinx/jupyter_notebooks/PYNQ-FWI/FWI_python/accelerated/"
+        self.pre_process()
+        
+        print("Succesfully inverted Observed data into Modelled data!")
+        
+    def pre_process(self):
+        inputfile = open(self.dir+"input/GenericInput.json")
 
         input_data = json.load(inputfile)
 
@@ -30,13 +39,18 @@ class Pre_processor():
 
         #pre_processing
         chi = []
-        with open(dir+"input/10x10_100CPU.txt","r") as f:
+        with open(self.dir+"input/10x10_100CPU.txt","r") as f:
             for line in f:
                 chi.append(float(line))
 
         ref = model.calculatePressureField(chi)
 
-        with open(dir+"output/10x10_100CPUInvertedChiToPressure.txt","w") as f:
+        with open(self.dir+"output/10x10_100CPUInvertedChiToPressure.txt","w") as f:
             for i in ref:
                 f.write(str(i.real)+","+str(i.imag))
                 f.write("\n")
+                
+        with open(self.dir+"output/chi_ref_10x10_100CPU.txt","w")as f:
+            for i in chi:
+                f.write(str(i)+"\n")
+        

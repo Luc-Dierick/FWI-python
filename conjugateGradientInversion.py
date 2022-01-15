@@ -7,6 +7,8 @@ import numpy as np
 import copy
 from pynq import allocate
 import time
+import sys
+from tqdm import tqdm, tqdm_notebook
 
 class ConjugateGradientInversion():
     
@@ -47,6 +49,7 @@ class ConjugateGradientInversion():
         return initialvalue
 
     def reconstruct(self, pData, gInput):
+        counter = 1
 
         # Initialization of variables
         eta = 1.0 / self.calculateCost(pData, [0.0]* len(pData), 1.0)
@@ -54,7 +57,6 @@ class ConjugateGradientInversion():
         self.chiEstimate.zero()
         isConverged = False
         tolerance = 9.99*10**-7
-        counter = 1
 
 
         # Initialize conjugate gradient parameters
@@ -73,10 +75,9 @@ class ConjugateGradientInversion():
         # Update contrast-function first time
         pDataEst = self.forwardModel.calculatePressureField(self.chiEstimate)
 
-        
+
         residualVector = np.subtract(pData, pDataEst)
 
-        
         residualCurrent = self.calculateCost(pData, pDataEst, eta)
 
         zeta = gradientCurrent = copy.deepcopy(self.calculateUpdateDirection(residualVector, gradientCurrent, eta))
@@ -84,14 +85,13 @@ class ConjugateGradientInversion():
 
 
         self.chiEstimate = self.chiEstimate + (np.multiply(alpha, zeta))
-        
+
         gradientPrevious = copy.deepcopy(gradientCurrent)
         residualPrevious = copy.deepcopy(residualCurrent)
 
 
         # main loop
-
-        for i in range(gInput["max"]):
+        for i in tqdm_notebook(range(79), desc="Reconstructing Chi"):
             # Calculate the pressure data from chiEstimate
             pDataEst = self.forwardModel.calculatePressureField(self.chiEstimate)
             residualVector = np.subtract(pData, pDataEst)
@@ -99,7 +99,7 @@ class ConjugateGradientInversion():
             # Check residual
             residualCurrent = self.calculateCost(pData, pDataEst, eta)
             isConverged = (residualCurrent < tolerance)
-            
+
             if isConverged:
                 break
 
@@ -107,12 +107,12 @@ class ConjugateGradientInversion():
             # Note: deltaAmplification decreases the step size for increasing iteration step
             deltaAmplification = 100 / (int(i) + 1.0)
 
-            
+
 
             self.calculateRegularisationParameters(regularisationPrevious, regularisationCurrent, deltaAmplification)
             zeta, gradientCurrent, gradientPrevious = self.calculateUpdateDirectionRegularisation(residualVector, gradientCurrent, gradientPrevious, eta, regularisationCurrent, regularisationPrevious, zeta, residualPrevious)
             alpha = self.calculateStepSizeRegularisation(regularisationPrevious, regularisationCurrent, residualVector, eta, residualPrevious, zeta)
-            
+
             self.chiEstimate = self.chiEstimate + (zeta * alpha)
 
             # save regularisation variables for next iteration
@@ -124,7 +124,6 @@ class ConjugateGradientInversion():
             regularisationPrevious.deltaSquared = copy.deepcopy(regularisationCurrent.deltaSquared)
             regularisationPrevious.bSquared = copy.deepcopy(regularisationCurrent.bSquared)
 
-            print("LOOP :"+ str(counter))
             # update counter
             counter+=1
 
