@@ -68,9 +68,9 @@ class Post_processor():
         avg_relative_error = np.sqrt(mse)/np.sqrt(square_mean_original)*100
         total_seconds = self.readParameter("time", path = self.outputPath)
 
-        print("The MSE (mean square error) is:       " + str(mse), flush = True)
-        print("The average relative error is:        " + str(avg_relative_error), flush = True)
-        print("Execution time in seconds:            " + total_seconds, flush = True)
+#         print("The MSE (mean square error) is:       " + str(mse), flush = True)
+#         print("The average relative error is:        " + str(avg_relative_error), flush = True)
+#         print("Execution time in seconds:            " + total_seconds, flush = True)
 
         # Set the minimum and maximum values to chi
         self.v_min = self.chi1.min()

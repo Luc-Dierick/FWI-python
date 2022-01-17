@@ -14,42 +14,33 @@ import os
 class Processor():
     def __init__(self):
         self.dir = "/home/xilinx/jupyter_notebooks/PYNQ-FWI/FWI_python/default/"
-        
+        self.dot_conj = 0
+        self.dot_fin = 0
+        self.upd = 0
+        self.total = 0 
+        self.func_time = 0
         
         
     def process_arm(self):
         self.accelerated = False
         self.dir = "/home/xilinx/jupyter_notebooks/PYNQ-FWI/FWI_python/arm/"
-        chi_estimate, model, inverse, total_time = self.process()
+        chi_estimate = self.process()
          
         with open(self.dir+"output/chi_est_10x10_100CPU.txt","w") as f:
             for i in chi_estimate.data:
                 f.write(str(i)+"\n")
 
-        print(f"Dotproduct time ConjugateGradient: {inverse.dot_time}")
-        print(f"Dotproduct time FiniteDifference: {model.dot_time}")
-        print(f"UpdateGradient time: {inverse.updtime}")
-        print(F"Total time: {total_time} ")
-
-
     def process_accelerated(self,d_vector_I_dma,d_matrix_IO_dma,u_vector_I_dma,u_kappa_IO_dma):
         self.accelerated = True
         self.dir = "/home/xilinx/jupyter_notebooks/PYNQ-FWI/FWI_python/accelerated/"
-        chi_estimate, model, inverse, total_time = self.process(d_vector_I_dma,d_matrix_IO_dma,u_vector_I_dma,u_kappa_IO_dma)
+        chi_estimate = self.process(d_vector_I_dma,d_matrix_IO_dma,u_vector_I_dma,u_kappa_IO_dma)
                 
         with open(self.dir+"output/chi_est_10x10_100CPU.txt","w") as f:
             for i in chi_estimate.data:
-                f.write(str(i)+"\n")
-                        
-        print(f"Dotproduct time ConjugateGradient: {inverse.dot_time}")
-        print(f"Dotproduct time FiniteDifference: {model.dot_time}")
-        print(f"UpdateGradient time: {inverse.updtime}")
-        print(F"Total time: {total_time} ")
-
-        
+                f.write(str(i)+"\n")        
                 
         with open(self.dir+"output/10x10_100CPU.pythonIn","w") as f:
-            f.write(f"This run was parametrized as follows: \nnxt   = 10\nnxt_original = 10\nnzt_original = 10\nTiming:\nTotal_time: {total_time}")       
+            f.write(f"This run was parametrized as follows: \nnxt   = 10\nnxt_original = 10\nnzt_original = 10\nTiming:\nTotal_time: {self.total}")       
 
     def process(self,d_vector_I_dma=None,d_matrix_IO_dma=None,u_vector_I_dma=None,u_kappa_IO_dma=None):
                
@@ -78,8 +69,14 @@ class Processor():
         start_time = time.time()
         chi_estimate = inverse.reconstruct(referencePressureData, input_data)
         total_time = time.time() - start_time
-                    
-        return chi_estimate, model, inverse, total_time
+        
+        self.dot_conj = inverse.dot_time
+        self.dot_fin = model.dot_time
+        self.upd = inverse.updtime
+        self.total = total_time
+        self.func_time = self.dot_conj + self.dot_fin + self.upd
+
+        return chi_estimate
         
 
         
