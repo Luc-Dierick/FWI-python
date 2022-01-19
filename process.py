@@ -14,8 +14,7 @@ import os
 class Processor():
     def __init__(self):
         self.dir = "/home/xilinx/jupyter_notebooks/PYNQ-FWI/FWI_python/default/"
-        self.dot_conj = 0
-        self.dot_fin = 0
+        self.dot = 0
         self.upd = 0
         self.total = 0 
         self.func_time = 0
@@ -70,11 +69,10 @@ class Processor():
         chi_estimate = inverse.reconstruct(referencePressureData, input_data)
         total_time = time.time() - start_time
         
-        self.dot_conj = inverse.dot_time
-        self.dot_fin = model.dot_time
+        self.dot = model.dot_time
         self.upd = inverse.updtime
         self.total = total_time
-        self.func_time = self.dot_conj + self.dot_fin + self.upd
+        self.func_time = self.dot + self.upd
 
         return chi_estimate
         

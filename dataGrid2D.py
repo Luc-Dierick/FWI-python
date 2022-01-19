@@ -39,10 +39,7 @@ class dataGrid2D():
         raise NotImplementedError
 
     def summation(self):
-        result = 0.0
-        for i in range(self.grid.getNumberOfGridPoints()):
-            result += self.data[i]
-        return result
+        return np.sum(self.data)
 
     def innerProduct(self, rhs) -> float:
         prod = 0.0

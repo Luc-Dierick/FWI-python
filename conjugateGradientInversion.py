@@ -23,7 +23,6 @@ class ConjugateGradientInversion():
         self.chiEstimate = dataGrid2D(self.grid)
         self.magnitude = self.frequencies.count * self.sources.count * self.receivers.count
         self.updtime = 0
-        self.dot_time = 0
         if self.forwardModel.accelerated:
             #set up DMAs
             self.d_vector_I_dma = self.forwardModel.d_vector_I_dma
@@ -33,7 +32,7 @@ class ConjugateGradientInversion():
             
             #allocate contiguous memory for kappa and put kappa in there.
             self.kappa_buffer_PL = allocate(shape=(125,100), dtype=np.complex64)
-            self.kappa_buffer_PL[:] = np.array([np.array(x.data) for x in self.forwardModel.getKernel()])[:]
+            self.kappa_buffer_PL[:] = self.forwardModel.kappa_buffer_PL #np.array([np.array(x.data) for x in self.forwardModel.getKernel()])[:]
                      
             self.residualVector_buffer_PL = allocate(shape=(125,),dtype=np.complex64)
             self.kappaTimesResidual_buffer_PL = allocate(shape=(100), dtype=np.complex64)
@@ -138,28 +137,7 @@ class ConjugateGradientInversion():
         regularisationPrevious.errorFunctional = (1.0 / (self.grid.getDomainArea())) * integral.summation() * self.grid.getCellVolume()
 
     def calculateKappaTimesZeta(self, zeta):
-        kernel = [0] *(self.frequencies.count * self.sources.count * self.receivers.count)
-        start_time = time.time()
-        if self.forwardModel.accelerated:
-            self.forwardModel.CurrentPressureFieldSerial_buffer_PL[:] = zeta.data[:]
-            self.forwardModel.dotProduct_HW(self.forwardModel.kappa_buffer_PL, 
-                                            self.forwardModel.CurrentPressureFieldSerial_buffer_PL,
-                                            self.forwardModel.kOperator_buffer_PL)
-            kernel[:] = self.forwardModel.kOperator_buffer_PL[:]
-        else:
-            kappa = self.forwardModel.getKernel()
-            for i in range(self.magnitude):
-                kernel[i] = np.dot(kappa[i].data, zeta.data)
-
-        
-        self.dot_time += time.time() - start_time
-        return kernel
-
-    def dotProduct(self,a,b):
-        prod = 0.0
-        for i in range(len(a.data)):
-            prod += a.data[i] * b.data[i]
-        return prod
+        return self.forwardModel.applyKappa(zeta)
 
     def calculateStepSizeRegularisation(self, regularisationPrevious, regularisationCurrent, residualVector, eta, fDataPrevious, zeta):
         
@@ -308,11 +286,14 @@ class ConjugateGradientInversion():
         kappaTimesResidual = dataGrid2D(self.grid,complex)
         start_time = time.time()
         if self.forwardModel.accelerated:
+#             for i in range(1):
+#                 low_range = 125*i
+#                 high_range = 125* (i + 1)  
             self.residualVector_buffer_PL[:] = residualVector[:]
+#                self.kappa_buffer_PL[:] = np.array([np.array(x.data) for x in self.forwardModel.vkappa[low_range:high_range]])
             self.updateDirection_HW(self.residualVector_buffer_PL, self.kappa_buffer_PL, self.kappaTimesResidual_buffer_PL)
             kappaTimesResidual.data[:] = self.kappaTimesResidual_buffer_PL
         else:
-            kappaTimesResidual.zero()
             kappa = self.forwardModel.getKernel()
             for i in range(self.frequencies.count):
                 l_i = i * self.receivers.count * self.sources.count

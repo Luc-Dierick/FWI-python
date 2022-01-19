@@ -106,22 +106,30 @@ class FiniteDifferenceForwardModel():
     def calculatePressureField(self, chiEst):
         #second function
         return self.applyKappa(chiEst)
+
         
     def applyKappa(self, CurrentPressureFieldSerial):
-        kOperator = []
         start_time = time.time()
+        kOperator = []
         cur = CurrentPressureFieldSerial
         if isinstance(CurrentPressureFieldSerial,dataGrid2D):
             cur = CurrentPressureFieldSerial.data   
             
         if self.accelerated:
+#             slices = 1
             self.CurrentPressureFieldSerial_buffer_PL[:] = cur[:]
+#             for i in range(slices):
+#                 low_range = 125*i
+#                 high_range = 125* (i + 1)
+#                 self.kappa_buffer_PL[:] = np.array([np.array(x.data) for x in self.vkappa[low_range:high_range]])
             self.dotProduct_HW(self.kappa_buffer_PL, self.CurrentPressureFieldSerial_buffer_PL, self.kOperator_buffer_PL)
-            kOperator[:] = self.kOperator_buffer_PL
+            kOperator[:] = self.kOperator_buffer_PL[:]
         else:
             for i in range(self.magnitude):
                 kOperator.append(np.dot(self.vkappa[i].data,cur))
+
         self.dot_time += time.time()-start_time
+
         return kOperator
 
     def dotProduct_HW(self,matrix_in, vector_in, out):
