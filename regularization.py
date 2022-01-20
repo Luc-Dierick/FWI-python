@@ -1,4 +1,4 @@
-from .dataGrid2D import dataGrid2D
+from dataGrid2D import dataGrid2D
 import copy
 
 

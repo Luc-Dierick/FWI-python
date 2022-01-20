@@ -1,5 +1,5 @@
 from typing import List
-from .grid2D import grid2D
+from grid2D import grid2D
 import math
 import numpy as np
 import copy

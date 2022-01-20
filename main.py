@@ -1,26 +1,19 @@
-import argparse
-import numpy as np
-import json
-
-
-from grid2D import grid2D
-from sources import Sources
-from receivers import Receivers
-from frequenciesGroup import frequenciesGroup
-from finiteDifferenceForwardModel import FiniteDifferenceForwardModel
-from conjugateGradientInversion import ConjugateGradientInversion
 
 def main():
+    import numpy as np
+    import json
 
-    arguments = parse_args()
+
+    from grid2D import grid2D
+    from sources import Sources
+    from receivers import Receivers
+    from frequenciesGroup import frequenciesGroup
+    from finiteDifferenceForwardModel import FiniteDifferenceForwardModel
+    from conjugateGradientInversion import ConjugateGradientInversion
+
+  
+    inputfile = open("/home/xilinx/jupyter_notebooks/PYNQ-FWI/FWI_python/default/input/GenericInput.json")
     
-    print(arguments)
-
-    #arguments.dir ="/home/lucdierick/FWI-python/default/"
-    
-    inputfile = open(arguments.dir+"input/GenericInput.json")
-
-
     input_data = json.load(inputfile)
 
     grid = grid2D([input_data["reservoirTopLeft"]["x"],input_data["reservoirTopLeft"]["z"]], [input_data["reservoirBottomRight"]["x"],input_data["reservoirBottomRight"]["z"]],[input_data["ngrid"]["x"],input_data["ngrid"]["z"]])
@@ -31,20 +24,7 @@ def main():
     magnitude = source.count * freq.count * receiver.count
 
     model = FiniteDifferenceForwardModel(grid,source,receiver,freq,None)
-    
-    # #pre_processing
-    # chi = []
-    # with open("./default/input/10x10_100CPU.txt","r") as f:
-    #     for line in f:
-    #         chi.append(float(line))
-        
-    # ref = model.calculatePressureField(chi)
-    # with open("./default/output/10x10_100CPUInvertedChiToPressure.txt","w") as f:
-    #     for i in ref:
-    #         f.write(str(i.real)+","+str(i.imag))
-    #         f.write("\n")
-    
-    
+       
     referencePressureData = []
 
     with open(arguments.dir+"output/"+input_data["fileName"]+"InvertedChiToPressure.txt") as f:
@@ -58,6 +38,8 @@ def main():
     import time
     start_time = time.time()
     chi = inverse.reconstruct(referencePressureData, input_data)
+    return chi
+
     print(f"total time: {time.time()-start_time}")
     with open(arguments.dir+"output/chi20.txt","w") as f:
         for i in chi.data:
@@ -72,6 +54,13 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     # Input arguments
+    parser.add_argument("-src", type=int, required=False, default = 5,help= "Amount of sources")
+    parser.add_argument("-rcv", type=int, required=False, default = 5,help= "Amount of receivers")
+    parser.add_argument("-freq", type=int, required=False, default = 5,help= "Amount of frequencies")
+    parser.add_argument("-x", type=int, required=False, default = 10,help= "x GridSize")
+    parser.add_argument("-z", type=int, required=False, default = 10,help= "z GridSize")
+    
+    
     parser.add_argument("-b", "--bin", type=str, required=False, default="./bin/",
                         help="Path to bin folder containing the app executables")
 

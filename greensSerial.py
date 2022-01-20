@@ -1,5 +1,5 @@
-from .grid2D import grid2D
-from .dataGrid2D import dataGrid2D
+from grid2D import grid2D
+from dataGrid2D import dataGrid2D
 import numpy as np
 import math
 import copy

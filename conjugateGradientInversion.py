@@ -1,8 +1,8 @@
 
 from numpy.lib.function_base import gradient
-from .finiteDifferenceForwardModel import FiniteDifferenceForwardModel
-from .regularization import RegularisationParameters
-from .dataGrid2D import dataGrid2D
+from finiteDifferenceForwardModel import FiniteDifferenceForwardModel
+from regularization import RegularisationParameters
+from dataGrid2D import dataGrid2D
 import numpy as np
 import copy
 from pynq import allocate
@@ -105,8 +105,6 @@ class ConjugateGradientInversion():
             # Initializae Regularisation Parameters
             # Note: deltaAmplification decreases the step size for increasing iteration step
             deltaAmplification = 100 / (int(i) + 1.0)
-
-
 
             self.calculateRegularisationParameters(regularisationPrevious, regularisationCurrent, deltaAmplification)
             zeta, gradientCurrent, gradientPrevious = self.calculateUpdateDirectionRegularisation(residualVector, gradientCurrent, gradientPrevious, eta, regularisationCurrent, regularisationPrevious, zeta, residualPrevious)

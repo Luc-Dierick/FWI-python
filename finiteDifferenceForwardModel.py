@@ -1,8 +1,8 @@
 import math
-from .dataGrid2D import dataGrid2D
-from .grid2D import grid2D
-from .greensSerial import greensRect2DCpu
-from .wrapper import Wrapper
+from dataGrid2D import dataGrid2D
+from grid2D import grid2D
+from greensSerial import greensRect2DCpu
+from wrapper import Wrapper
 import copy
 from pynq import allocate
 import numpy as np
@@ -34,18 +34,19 @@ class FiniteDifferenceForwardModel():
 
         
         self.accelerated = accelerated
-        #set up DMAs
-        self.d_vector_I_dma = d_vector_I_dma
-        self.d_matrix_IO_dma =d_matrix_IO_dma
-        self.u_vector_I_dma = u_vector_I_dma
-        self.u_kappa_IO_dma = u_kappa_IO_dma
-        
-        #set up buffers
-        self.kappa_buffer_PL = allocate(shape=(125,100), dtype=np.complex64)
-        self.CurrentPressureFieldSerial_buffer_PL = allocate(shape=(100,), dtype=np.float32)
-        self.kOperator_buffer_PL = allocate(shape=(125), dtype=np.complex64)
-        self.kappa_buffer_PL[:] = np.array([np.array(x.data) for x in self.vkappa])[:]
-        
+        if self.accelerated:
+            #set up DMAs
+            self.d_vector_I_dma = d_vector_I_dma
+            self.d_matrix_IO_dma =d_matrix_IO_dma
+            self.u_vector_I_dma = u_vector_I_dma
+            self.u_kappa_IO_dma = u_kappa_IO_dma
+
+            #set up buffers
+            self.kappa_buffer_PL = allocate(shape=(125,100), dtype=np.complex64)
+            self.CurrentPressureFieldSerial_buffer_PL = allocate(shape=(100,), dtype=np.float32)
+            self.kOperator_buffer_PL = allocate(shape=(125), dtype=np.complex64)
+            self.kappa_buffer_PL[:] = np.array([np.array(x.data) for x in self.vkappa])[:]
+
        
         self.dot_time = 0
 
