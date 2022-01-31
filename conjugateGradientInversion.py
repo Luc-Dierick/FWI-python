@@ -90,7 +90,8 @@ class ConjugateGradientInversion():
 
 
         # main loop
-        for i in tqdm_notebook(range(79), desc="Reconstructing Chi"):
+#         for i in tqdm_notebook(range(gInput["max"]), desc="Reconstructing Chi"):
+        for i in range(gInput["max"]):
             # Calculate the pressure data from chiEstimate
             pDataEst = self.forwardModel.calculatePressureField(self.chiEstimate)
             residualVector = np.subtract(pData, pDataEst)
@@ -123,6 +124,7 @@ class ConjugateGradientInversion():
 
             # update counter
             counter+=1
+            print(f"Loop: {counter} ")
 
         return self.chiEstimate
 
