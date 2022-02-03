@@ -31,10 +31,10 @@ class ConjugateGradientInversion():
             self.u_kappa_IO_dma = self.forwardModel.u_kappa_IO_dma
             
             #allocate contiguous memory for kappa and put kappa in there.
-            self.kappa_buffer_PL = allocate(shape=(125,self.forwardModel.gridsize), dtype=np.complex64)
+            self.kappa_buffer_PL = allocate(shape=(self.forwardModel.resolution,self.forwardModel.gridsize), dtype=np.complex64)
             self.kappa_buffer_PL[:] = self.forwardModel.kappa_buffer_PL #np.array([np.array(x.data) for x in self.forwardModel.getKernel()])[:]
                      
-            self.residualVector_buffer_PL = allocate(shape=(125,),dtype=np.complex64)
+            self.residualVector_buffer_PL = allocate(shape=(self.forwardModel.resolution,),dtype=np.complex64)
             self.kappaTimesResidual_buffer_PL = allocate(shape=(self.forwardModel.gridsize), dtype=np.complex64)
         
     def calculateCost(self, pData, pDataEst, eta):
@@ -55,7 +55,7 @@ class ConjugateGradientInversion():
 
         self.chiEstimate.zero()
         isConverged = False
-        tolerance = 9.99*10**-7
+        tolerance = gInput["tolerance"]
 
 
         # Initialize conjugate gradient parameters
@@ -98,7 +98,7 @@ class ConjugateGradientInversion():
 
             # Check residual
             residualCurrent = self.calculateCost(pData, pDataEst, eta)
-            isConverged = (residualCurrent < tolerance)
+            isConverged = (np.abs(residualPrevious - residualCurrent) < tolerance)
 
             if isConverged:
                 break
