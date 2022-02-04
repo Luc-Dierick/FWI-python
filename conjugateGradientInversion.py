@@ -21,7 +21,7 @@ class ConjugateGradientInversion():
         self.receivers = forwardModel.getReceiver()
         self.frequencies = forwardModel.getFreq()
         self.chiEstimate = dataGrid2D(self.grid)
-        self.magnitude = self.frequencies.count * self.sources.count * self.receivers.count
+        self.magnitude = self.forwardModel.magnitude
         self.updtime = 0
         if self.forwardModel.accelerated:
             #set up DMAs

@@ -20,7 +20,10 @@ class FiniteDifferenceForwardModel():
         self.freq = freq
         self.fmInput = fmInput
         self.magnitude = self.source.count * self.freq.count * self.receiver.count
-        
+        self.gridsize = gridsize
+        self.resolution = resolution
+        if self.magnitude < self.resolution:
+            self.magnitude = self.resolution
         self.vkappa = []
         self.Greens = []
         self.vpTot = []
@@ -28,17 +31,17 @@ class FiniteDifferenceForwardModel():
         
         self.createGreens()
         self.createKappa(self.freq,self.source,self.receiver)
-
+        print(len(self.vkappa))
+        print(len(self.vkappa[0].data))
         self.createPTot(freq,source)
         self.calculateKappa()
+        print(len(self.vkappa))
+        print(len(self.vkappa[0].data))
+
 
         
         self.accelerated = accelerated
         if self.accelerated:
-            self.gridsize = gridsize
-            self.resolution = resolution
-            if self.magnitude < self.resolution:
-                self.magnitude = self.resolution
             #set up DMAs
             self.d_vector_I_dma = d_vector_I_dma
             self.d_matrix_IO_dma =d_matrix_IO_dma
