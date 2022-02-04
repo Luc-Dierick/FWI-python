@@ -55,7 +55,7 @@ class ConjugateGradientInversion():
 
         self.chiEstimate.zero()
         isConverged = False
-        tolerance = 9.99*10**-7
+        tolerance = gInput["tolerance"]
 
 
         # Initialize conjugate gradient parameters
@@ -98,7 +98,7 @@ class ConjugateGradientInversion():
 
             # Check residual
             residualCurrent = self.calculateCost(pData, pDataEst, eta)
-            isConverged = (residualCurrent < tolerance)
+            isConverged = (np.abs(residualPrevious - residualCurrent) < tolerance)
 
             if isConverged:
                 break
