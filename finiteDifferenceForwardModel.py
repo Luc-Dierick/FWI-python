@@ -10,7 +10,7 @@ import time
 
 
 class FiniteDifferenceForwardModel():
-    def __init__(self,grid,source,receiver,freq,fmInput,accelerated,gridsize=200,d_vector_I_dma=None,d_matrix_IO_dma=None,u_vector_I_dma=None,u_kappa_IO_dma=None) -> None:
+    def __init__(self,grid,source,receiver,freq,fmInput,accelerated,gridsize=200, resolution=250,d_vector_I_dma=None,d_matrix_IO_dma=None,u_vector_I_dma=None,u_kappa_IO_dma=None) -> None:
         
         self.wrapper = Wrapper()
 
@@ -36,6 +36,7 @@ class FiniteDifferenceForwardModel():
         self.accelerated = accelerated
         if self.accelerated:
             self.gridsize = gridsize
+            self.resolution = resolution
             #set up DMAs
             self.d_vector_I_dma = d_vector_I_dma
             self.d_matrix_IO_dma =d_matrix_IO_dma
@@ -43,9 +44,9 @@ class FiniteDifferenceForwardModel():
             self.u_kappa_IO_dma = u_kappa_IO_dma
 
             #set up buffers
-            self.kappa_buffer_PL = allocate(shape=(125,self.gridsize), dtype=np.complex64)
+            self.kappa_buffer_PL = allocate(shape=(self.resolution,self.gridsize), dtype=np.complex64)
             self.CurrentPressureFieldSerial_buffer_PL = allocate(shape=(self.gridsize,), dtype=np.float32)
-            self.kOperator_buffer_PL = allocate(shape=(125), dtype=np.complex64)
+            self.kOperator_buffer_PL = allocate(shape=(self.resolution,), dtype=np.complex64)
             self.kappa_buffer_PL[:] = np.array([np.array(x.data) for x in self.vkappa])[:]
 
        
