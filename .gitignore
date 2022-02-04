@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 
 dask*
+dask-worker-space*
 
 # Distribution / packaging
 .Python

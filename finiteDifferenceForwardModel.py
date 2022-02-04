@@ -37,6 +37,8 @@ class FiniteDifferenceForwardModel():
         if self.accelerated:
             self.gridsize = gridsize
             self.resolution = resolution
+            if self.magnitude < self.resolution:
+                self.magnitude = self.resolution
             #set up DMAs
             self.d_vector_I_dma = d_vector_I_dma
             self.d_matrix_IO_dma =d_matrix_IO_dma
@@ -79,7 +81,7 @@ class FiniteDifferenceForwardModel():
    
 
     def createKappa(self,freq,source, receiver):
-        for i in range(freq.count*source.count*receiver.count):
+        for i in range(self.magnitude):
             self.vkappa.append(dataGrid2D(self.grid))
 
     def createPTot(self,freq,source):
