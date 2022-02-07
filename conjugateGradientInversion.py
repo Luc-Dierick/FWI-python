@@ -97,7 +97,7 @@ class ConjugateGradientInversion():
         self.calcCost += time.time() - t
 
         t = time.time()
-        zeta = gradientCurrent = copy.deepcopy(self.calculateUpdateDirection(residualVector, gradientCurrent, eta))
+        zeta = gradientCurrent = self.calculateUpdateDirection(residualVector, gradientCurrent, eta)
         self.calcUpd += time.time() -t
         t = time.time()
         alpha = self.calculateStepSize(zeta, residualVector)
@@ -148,6 +148,7 @@ class ConjugateGradientInversion():
             t = time.time()
             self.calculateRegularisationParameters(regularisationPrevious, regularisationCurrent, deltaAmplification)
             self.calcRegParam += time.time() -t
+            
             t = time.time()
             zeta, gradientCurrent, gradientPrevious = self.calculateUpdateDirectionRegularisation(residualVector, gradientCurrent, gradientPrevious, eta, regularisationCurrent, regularisationPrevious, zeta, residualPrevious)
             self.calcUpd += time.time()-t

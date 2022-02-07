@@ -69,7 +69,7 @@ class dataGrid2D():
                 else:
                     gradientDx = (self.data[i * nx[0] + j + 1] - self.data[i * nx[0] + j - 1]) / (2.0 * dx[0])
                 
-                gradientField[0].data[index] = copy.deepcopy(gradientDx)
+                gradientField[0].data[index] = gradientDx
 
                 gradientDz = None
                 if(i == 0):
@@ -78,7 +78,7 @@ class dataGrid2D():
                     gradientDz = (self.data[(i - 2) * nx[0] + j] - 4 * self.data[(i - 1) * nx[0] + j] + 3 * self.data[i * nx[0] + j]) / (2.0 * dx[1])
                 else:
                     gradientDz = (self.data[(i + 1) * nx[0] + j] - self.data[(i - 1) * nx[0] + j]) / (2.0 * dx[1])
-                gradientField[1].data[index] = copy.deepcopy(gradientDz)
+                gradientField[1].data[index] = gradientDz
 
    
     def getRealPart(self):
