@@ -104,10 +104,10 @@ class FiniteDifferenceForwardModel():
 
                 for k in range(self.source.count):
                     
-                    d =  copy.deepcopy(self.Greens[i].getReceiverCont(j))
-                    v = copy.deepcopy(self.vpTot[i * self.source.count + k])
+                    d = self.Greens[i].getReceiverCont(j)
+                    v = self.vpTot[i * self.source.count + k]
 
-                    self.vkappa[li+lj+k] = d*v
+                    self.vkappa[li+lj+k] = copy.deepcopy(d*v)
   
 
 
