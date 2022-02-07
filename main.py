@@ -12,11 +12,13 @@ from conjugateGradientInversion import ConjugateGradientInversion
 
 def main():
 
+    import time
+    start_time = time.time()
     arguments = parse_args()
     
     print(arguments)
 
-    #arguments.dir ="/home/lucdierick/FWI-python/default/"
+    arguments.dir ="/home/luc/Documents/FWI-python/default/"
     
     inputfile = open(arguments.dir+"input/GenericInput.json")
 
@@ -46,29 +48,24 @@ def main():
             f.write("\n")
     
     
-    referencePressureData = []
+    referencePressureData = ref
 
-    with open(arguments.dir+"output/"+input_data["fileName"]+"InvertedChiToPressure.txt") as f:
-        for line in f:
-            c = line.split(",")
-            referencePressureData.append(complex(float(c[0]),float(c[1])))
+    # with open(arguments.dir+"output/"+input_data["fileName"]+"InvertedChiToPressure.txt") as f:
+    #     for line in f:
+    #         c = line.split(",")
+    #         referencePressureData.append(complex(float(c[0]),float(c[1])))
 
     inverse = ConjugateGradientInversion(None,model,input_data)
     input_data["max"] = 1000
     
-    import time
-    start_time = time.time()
+   
     chi = inverse.reconstruct(referencePressureData, input_data)
     
-    print(f"total time: {time.time()-start_time}")
-    print(f"dot: {model.dot_time} upd: {inverse.updtime} func: {model.dot_time + inverse.updtime}")
     with open(arguments.dir+"output/"+input_data["fileName"]+"RES.txt","w") as f:
         for i in chi.data:
             f.write(str(i)+"\n")
-        
-
- 
-
+    print(f"total time: {time.time()-start_time}")
+    print(f"dot: {model.dot_time} upd: {inverse.updtime} func: {model.dot_time + inverse.updtime}")
 
 def parse_args():
     #configure argument parser

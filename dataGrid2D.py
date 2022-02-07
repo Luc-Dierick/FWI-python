@@ -41,7 +41,6 @@ class dataGrid2D():
     def summation(self):
         return np.sum(self.data)
 
-
     def innerProduct(self, rhs) -> float:
         prod = 0.0
         for i in range(len(self.data)):
