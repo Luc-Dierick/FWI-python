@@ -21,8 +21,20 @@ class ConjugateGradientInversion():
         self.receivers = forwardModel.getReceiver()
         self.frequencies = forwardModel.getFreq()
         self.chiEstimate = dataGrid2D(self.grid)
-        self.magnitude = self.forwardModel.magnitude
+        self.magnitude = self.frequencies.count * self.sources.count * self.receivers.count
         self.updtime = 0
+        
+        self.calcCost = 0 
+        self.calcPres = 0
+        self.calcRegParam = 0
+        self.calcUpd = 0
+        self.calcStep = 0
+        self.loop = 0
+        
+        
+        
+        
+        
         if self.forwardModel.accelerated:
             #set up DMAs
             self.d_vector_I_dma = self.forwardModel.d_vector_I_dma
@@ -51,8 +63,10 @@ class ConjugateGradientInversion():
         counter = 1
 
         # Initialization of variables
+        t = time.time()
         eta = 1.0 / self.calculateCost(pData, [0.0]* len(pData), 1.0)
-
+        self.calcCost += time.time() - t
+        
         self.chiEstimate.zero()
         isConverged = False
         tolerance = gInput["tolerance"]
@@ -72,15 +86,22 @@ class ConjugateGradientInversion():
         regularisationPrevious.bSquared.zero()
 
         # Update contrast-function first time
+        t = time.time()
         pDataEst = self.forwardModel.calculatePressureField(self.chiEstimate)
-
+        self.calcPres += time.time() - t
 
         residualVector = np.subtract(pData, pDataEst)
 
+        t = time.time()
         residualCurrent = self.calculateCost(pData, pDataEst, eta)
+        self.calcCost += time.time() - t
 
+        t = time.time()
         zeta = gradientCurrent = copy.deepcopy(self.calculateUpdateDirection(residualVector, gradientCurrent, eta))
+        self.calcUpd += time.time() -t
+        t = time.time()
         alpha = self.calculateStepSize(zeta, residualVector)
+        self.calcStep += time.time() - t
 
 
         self.chiEstimate = self.chiEstimate + (np.multiply(alpha, zeta))
@@ -91,25 +112,48 @@ class ConjugateGradientInversion():
 
         # main loop
 #         for i in tqdm_notebook(range(gInput["max"]), desc="Reconstructing Chi"):
+        s = time.time()
         for i in range(gInput["max"]):
+            
             # Calculate the pressure data from chiEstimate
+            t = time.time()
             pDataEst = self.forwardModel.calculatePressureField(self.chiEstimate)
+            self.calcPres += time.time() - t
             residualVector = np.subtract(pData, pDataEst)
 
             # Check residual
+            t = time.time()
             residualCurrent = self.calculateCost(pData, pDataEst, eta)
+            self.calcCost = time.time() - t
             isConverged = (np.abs(residualPrevious - residualCurrent) < tolerance)
 
             if isConverged:
+                print(f"cost: {self.calcCost}")
+                print(f"presfield: {self.calcPres}")
+                print(f"regparam: {self.calcRegParam}")
+                print(f"update: {self.calcUpd}")
+                print(f"stepsize: {self.calcStep}")
+                print(f"loop: {time.time()-s}")
+#                 self.calcPres = 0
+#                 self.calcRegParam = 0
+#                 self.calcUpd = 0
+#                 self.calcStep = 0
+        
                 break
 
             # Initializae Regularisation Parameters
             # Note: deltaAmplification decreases the step size for increasing iteration step
             deltaAmplification = 100 / (int(i) + 1.0)
-
+            
+            t = time.time()
             self.calculateRegularisationParameters(regularisationPrevious, regularisationCurrent, deltaAmplification)
+            self.calcRegParam += time.time() -t
+            t = time.time()
             zeta, gradientCurrent, gradientPrevious = self.calculateUpdateDirectionRegularisation(residualVector, gradientCurrent, gradientPrevious, eta, regularisationCurrent, regularisationPrevious, zeta, residualPrevious)
+            self.calcUpd += time.time()-t
+            t = time.time()
             alpha = self.calculateStepSizeRegularisation(regularisationPrevious, regularisationCurrent, residualVector, eta, residualPrevious, zeta)
+            self.calcStep += time.time()-t
 
             self.chiEstimate = self.chiEstimate + (zeta * alpha)
 
@@ -140,8 +184,6 @@ class ConjugateGradientInversion():
         return self.forwardModel.applyKappa(zeta)
 
     def calculateStepSizeRegularisation(self, regularisationPrevious, regularisationCurrent, residualVector, eta, fDataPrevious, zeta):
-        
-
         kappaTimesZeta = self.calculateKappaTimesZeta(zeta)
 
         a0 = fDataPrevious
@@ -228,7 +270,8 @@ class ConjugateGradientInversion():
     def calculateWeightingFactor(self,regularisationPrevious):
         bsquared = regularisationPrevious.gradientChiNormSquared + regularisationPrevious.deltaSquared
         bsquared.data = np.reciprocal(bsquared.data)
-        bsquared.data = [x * (1.0/self.grid.getDomainArea()) for x in bsquared.data]
+        domain = self.grid.getDomainArea()
+        bsquared.data = np.multiply(bsquared.data,(1.0/domain))
         return bsquared
 
     def calculateSteeringFactor(self,regularisationPrevious, regularisationCurrent, deltaAmplification):
@@ -276,21 +319,11 @@ class ConjugateGradientInversion():
 
         return gradientCurrent
 
-    def mult_list(self,a ,b):
-        res = [0] * len(b)
-        for i in range(len(b)):
-            res[i] = b[i] * a
-        return res
-
     def getUpdateDirectionInformation(self, residualVector):
         kappaTimesResidual = dataGrid2D(self.grid,complex)
         start_time = time.time()
         if self.forwardModel.accelerated:
-#             for i in range(1):
-#                 low_range = 125*i
-#                 high_range = 125* (i + 1)  
             self.residualVector_buffer_PL[:] = residualVector[:]
-#                self.kappa_buffer_PL[:] = np.array([np.array(x.data) for x in self.forwardModel.vkappa[low_range:high_range]])
             self.updateDirection_HW(self.residualVector_buffer_PL, self.kappa_buffer_PL, self.kappaTimesResidual_buffer_PL)
             kappaTimesResidual.data[:] = self.kappaTimesResidual_buffer_PL
         else:
