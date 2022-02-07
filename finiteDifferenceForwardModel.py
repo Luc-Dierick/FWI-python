@@ -3,7 +3,9 @@ from dataGrid2D import dataGrid2D
 from grid2D import grid2D
 from greensSerial import greensRect2DCpu
 from wrapper import Wrapper
+import numpy as np
 import copy
+import time
 
 
 class FiniteDifferenceForwardModel():
@@ -17,7 +19,6 @@ class FiniteDifferenceForwardModel():
         self.freq = freq
         self.fmInput = fmInput
         self.magnitude = self.source.count * self.freq.count * self.receiver.count
-
         self.vkappa = []
         self.Greens = []
         self.vpTot = []
@@ -28,6 +29,10 @@ class FiniteDifferenceForwardModel():
 
         self.createPTot(freq,source)
         self.calculateKappa()
+        
+        print(len(self.vkappa))
+
+        self.dot_time = 0
 
 
     def getKernel(self):
@@ -56,8 +61,12 @@ class FiniteDifferenceForwardModel():
    
 
     def createKappa(self,freq,source, receiver):
-        for i in range(freq.count*source.count*receiver.count):
+        print(freq.count)
+        print(source.count)
+        print(receiver.count)
+        for i in range(self.magnitude):
             self.vkappa.append(dataGrid2D(self.grid))
+            
 
     def createPTot(self,freq,source):
         for i in range(freq.count):
@@ -76,11 +85,12 @@ class FiniteDifferenceForwardModel():
 
                 for k in range(self.source.count):
                     
-                    d =  copy.deepcopy(self.Greens[i].getReceiverCont(j))
-                    v = copy.deepcopy(self.vpTot[i * self.source.count + k])
+                    d =  self.Greens[i].getReceiverCont(j)
+                    v = self.vpTot[i * self.source.count + k]
 
-                    self.vkappa[li+lj+k] = d*v
-  
+                    self.vkappa[li+lj+k] = copy.deepcopy(d*v)
+        
+
 
 
     def calculatePressureField(self, chiEst):
@@ -88,9 +98,14 @@ class FiniteDifferenceForwardModel():
         return self.applyKappa(chiEst)
         
     def applyKappa(self, CurrentPressureFieldSerial):
-        kOperator = []       
+        kOperator = []
+        start_time = time.time()
+        cur = CurrentPressureFieldSerial
+        if isinstance(CurrentPressureFieldSerial,dataGrid2D):
+            cur = CurrentPressureFieldSerial.data   
         for i in range(self.magnitude):
-            kOperator.append(self.dotProduct(self.vkappa[i],CurrentPressureFieldSerial))
+            kOperator.append(np.dot(self.vkappa[i].data,cur))
+        self.dot_time += time.time()-start_time
         return kOperator
 
     def calculatePTot(self, chiEst):

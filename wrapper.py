@@ -3,7 +3,7 @@ from ctypes import c_double
 pynq = '/home/xilinx/jupyter_notebooks/PYNQ-FWI/FWI_python/neuman.so' #32 bit compiled.
 wsl  = '/home/lucdierick/FWI-python/neumann.so'
 linux = "/home/luc/Documents/FWI-python/neumann.so"
-lib = cdll.LoadLibrary(linux)
+lib = cdll.LoadLibrary(wsl)
  
 class Wrapper(object):
     def __init__(self):
