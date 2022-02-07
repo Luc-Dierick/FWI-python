@@ -51,8 +51,9 @@ class ConjugateGradientInversion():
         counter = 1
 
         # Initialization of variables
-        if np.all(pData==0)==0:
-            return [0.0]*len(pData)
+        if np.all((pData==0)):
+            chi = dataGrid2D(self.grid)
+            return chi
             
         eta = 1.0 / self.calculateCost(pData, [0.0]* len(pData), 1.0)
         
