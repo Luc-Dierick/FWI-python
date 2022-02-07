@@ -10,7 +10,7 @@ class grid2D():
         self._dx[0] = int((self._xMax[0] - self._xMin[0])/self._nx[0])
         self._dx[1] = int((self._xMax[1] - self._xMin[1])/self._nx[1])
         self._nGridPoints = int(self._nx[0]*self._nx[1])
-        self._cellVolume = self._dx[0] *self._dx[1]
+        self._cellVolume = self._dx[0] *self._dx[1] if self._dx[0] *self._dx[1] > 0 else 1
         
     def __eq__(self,rhs):
         if(self._xMin != rhs._xMin or self._xMax != rhs._xMax or self._nx != rhs._nx or self._dx != rhs._dx):
