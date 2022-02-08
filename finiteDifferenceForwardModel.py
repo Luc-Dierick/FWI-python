@@ -10,7 +10,7 @@ import time
 
 
 class FiniteDifferenceForwardModel():
-    def __init__(self,grid,source,receiver,freq,fmInput,accelerated,gridsize=200, resolution=250,d_vector_I_dma=None,d_matrix_IO_dma=None,u_vector_I_dma=None,u_kappa_IO_dma=None) -> None:
+    def __init__(self,grid,source,receiver,freq,fmInput,accelerated,gridsize=100, resolution=300,d_vector_I_dma=None,d_matrix_IO_dma=None,u_vector_I_dma=None,u_kappa_IO_dma=None) -> None:
         
         self.wrapper = Wrapper()
 
@@ -34,8 +34,7 @@ class FiniteDifferenceForwardModel():
         self.createPTot(freq,source)
         self.calculateKappa()
 
-
-        
+       
         self.accelerated = accelerated
         if self.accelerated:
             #set up DMAs

@@ -35,7 +35,7 @@ class Pre_processor():
 
         magnitude = source.count * freq.count * receiver.count
 
-        model = FiniteDifferenceForwardModel(grid,source,receiver,freq,None,accelerated=False)
+        model = FiniteDifferenceForwardModel(grid,source,receiver,freq,None,accelerated=False,gridsize=100,resolution=300)
 
         #pre_processing
         chi = []
