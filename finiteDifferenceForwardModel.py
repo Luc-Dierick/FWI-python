@@ -1,8 +1,8 @@
 import math
-from dataGrid2D import dataGrid2D
-from grid2D import grid2D
-from greensSerial import greensRect2DCpu
-from wrapper import Wrapper
+from .dataGrid2D import dataGrid2D
+from .grid2D import grid2D
+from .greensSerial import greensRect2DCpu
+from .wrapper import Wrapper
 import copy
 from pynq import allocate
 import numpy as np
@@ -31,12 +31,8 @@ class FiniteDifferenceForwardModel():
         
         self.createGreens()
         self.createKappa(self.freq,self.source,self.receiver)
-        print(len(self.vkappa))
-        print(len(self.vkappa[0].data))
         self.createPTot(freq,source)
         self.calculateKappa()
-        print(len(self.vkappa))
-        print(len(self.vkappa[0].data))
 
 
         

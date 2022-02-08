@@ -1,8 +1,8 @@
 
 from numpy.lib.function_base import gradient
-from finiteDifferenceForwardModel import FiniteDifferenceForwardModel
-from regularization import RegularisationParameters
-from dataGrid2D import dataGrid2D
+from .finiteDifferenceForwardModel import FiniteDifferenceForwardModel
+from .regularization import RegularisationParameters
+from .dataGrid2D import dataGrid2D
 import numpy as np
 import copy
 from pynq import allocate
@@ -95,8 +95,8 @@ class ConjugateGradientInversion():
 
 
         # main loop
-#         for i in tqdm_notebook(range(gInput["max"]), desc="Reconstructing Chi"):
-        for i in range(gInput["max"]):
+        for i in tqdm_notebook(range(79), desc="Reconstructing Chi"):
+#         for i in range(gInput["max"]):
             # Calculate the pressure data from chiEstimate
             pDataEst = self.forwardModel.calculatePressureField(self.chiEstimate)
             residualVector = np.subtract(pData, pDataEst)
