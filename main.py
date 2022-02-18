@@ -2,7 +2,10 @@ import numpy as np
 import json
 import argparse
 import time
+import os
+import psutil
 
+#FWI imports
 from grid2D import grid2D
 from sources import Sources
 from receivers import Receivers
@@ -10,12 +13,10 @@ from frequenciesGroup import frequenciesGroup
 from finiteDifferenceForwardModel import FiniteDifferenceForwardModel
 from conjugateGradientInversion import ConjugateGradientInversion
 
+#pynq imports
 from pynq import Overlay, allocate
-import os
-import psutil
 
 def main():
-
     start_time = time.time()
 
     fwi = "300_100.bit"
