@@ -7,8 +7,7 @@ import numpy as np
 import copy
 from pynq import allocate
 import time
-import sys
-from tqdm import tqdm, tqdm_notebook
+
 
 class ConjugateGradientInversion():
     
@@ -32,7 +31,7 @@ class ConjugateGradientInversion():
             
             #allocate contiguous memory for kappa and put kappa in there.
             self.kappa_buffer_PL = allocate(shape=(self.forwardModel.resolution,self.forwardModel.gridsize), dtype=np.complex64)
-            self.kappa_buffer_PL[:] = self.forwardModel.kappa_buffer_PL #np.array([np.array(x.data) for x in self.forwardModel.getKernel()])[:]
+            self.kappa_buffer_PL[:] = self.forwardModel.kappa_buffer_PL
                      
             self.residualVector_buffer_PL = allocate(shape=(self.forwardModel.resolution,),dtype=np.complex64)
             self.kappaTimesResidual_buffer_PL = allocate(shape=(self.forwardModel.gridsize), dtype=np.complex64)
@@ -51,7 +50,7 @@ class ConjugateGradientInversion():
         counter = 1
 
         # Initialization of variables
-        if np.all((pData==0)):
+        if np.all((pData == 0)):
             chi = dataGrid2D(self.grid)
             return chi
             
@@ -95,7 +94,6 @@ class ConjugateGradientInversion():
 
 
         # main loop
-#         for i in tqdm_notebook(range(gInput["max"]), desc="Reconstructing Chi"):
         for i in range(gInput["max"]):
             # Calculate the pressure data from chiEstimate
             pDataEst = self.forwardModel.calculatePressureField(self.chiEstimate)
@@ -288,14 +286,10 @@ class ConjugateGradientInversion():
         return res
 
     def getUpdateDirectionInformation(self, residualVector):
-        kappaTimesResidual = dataGrid2D(self.grid,complex)
+        kappaTimesResidual = dataGrid2D(self.grid, complex)
         start_time = time.time()
         if self.forwardModel.accelerated:
-#             for i in range(1):
-#                 low_range = 125*i
-#                 high_range = 125* (i + 1)  
             self.residualVector_buffer_PL[:] = residualVector[:]
-#                self.kappa_buffer_PL[:] = np.array([np.array(x.data) for x in self.forwardModel.vkappa[low_range:high_range]])
             self.updateDirection_HW(self.residualVector_buffer_PL, self.kappa_buffer_PL, self.kappaTimesResidual_buffer_PL)
             kappaTimesResidual.data[:] = self.kappaTimesResidual_buffer_PL
         else:
@@ -307,7 +301,6 @@ class ConjugateGradientInversion():
                     for k in range(self.receivers.count):
                         dummy = kappa[l_i + l_j + k]
                         dummy.conjugate()
-
                         kappaTimesResidual = kappaTimesResidual + np.multiply(residualVector[l_i + l_j + k],dummy.data)
         self.updtime += time.time()-start_time
         return kappaTimesResidual

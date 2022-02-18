@@ -1,52 +1,70 @@
+import numpy as np
+import json
+import argparse
+import time
+
+from grid2D import grid2D
+from sources import Sources
+from receivers import Receivers
+from frequenciesGroup import frequenciesGroup
+from finiteDifferenceForwardModel import FiniteDifferenceForwardModel
+from conjugateGradientInversion import ConjugateGradientInversion
+
+from pynq import Overlay, allocate
+
 
 def main():
-    import numpy as np
-    import json
 
+    start_time = time.time()
 
-    from grid2D import grid2D
-    from sources import Sources
-    from receivers import Receivers
-    from frequenciesGroup import frequenciesGroup
-    from finiteDifferenceForwardModel import FiniteDifferenceForwardModel
-    from conjugateGradientInversion import ConjugateGradientInversion
+    fwi = "300_100.bit"
+    # import and download the overlay to the PL.
+    ol = Overlay(fwi, download=True)
 
-  
-    inputfile = open("/home/xilinx/jupyter_notebooks/PYNQ-FWI/FWI_python/default/input/GenericInput.json")
-    
+    # set up the dma's for the dotProduct functions
+    d_vector_I_dma = ol.D_vector_I
+    d_matrix_IO_dma = ol.D_matrix_IO
+
+    # set up the dma's for the updateDirection function
+    u_vector_I_dma = ol.U_vector_I
+    u_kappa_IO_dma = ol.U_kappa_IO
+
+    #initialize python objects
+    arguments = parse_args()
+    dir = "/home/xilinx/jupyter_notebooks/FWI_python/default/"
+    inputfile = open(dir+"input/GenericInput.json")
+
+    #load input parameters
     input_data = json.load(inputfile)
 
     grid = grid2D([input_data["reservoirTopLeft"]["x"],input_data["reservoirTopLeft"]["z"]], [input_data["reservoirBottomRight"]["x"],input_data["reservoirBottomRight"]["z"]],[input_data["ngrid"]["x"],input_data["ngrid"]["z"]])
     source = Sources([input_data["sourcesTopLeft"]["x"],input_data["sourcesTopLeft"]["z"]], [input_data["sourcesBottomRight"]["x"],input_data["sourcesBottomRight"]["z"]], input_data["nSources"])
-    receiver = Receivers([input_data["receiversTopLeft"]["x"],input_data["receiversTopLeft"]["z"]], [input_data["receiversBottomRight"]["x"],input_data["receiversBottomRight"]["z"]], input_data["nSources"])
+    receiver = Receivers([input_data["receiversTopLeft"]["x"],input_data["receiversTopLeft"]["z"]], [input_data["receiversBottomRight"]["x"],input_data["receiversBottomRight"]["z"]], input_data["nReceivers"])
     freq = frequenciesGroup(input_data["Freq"],input_data["c_0"])
 
-    magnitude = source.count * freq.count * receiver.count
+    #create forward model
+    model = FiniteDifferenceForwardModel(grid, source, receiver, freq, None, True, 100, 300, d_vector_I_dma,
+                                         d_matrix_IO_dma, u_vector_I_dma, u_kappa_IO_dma)
 
-    model = FiniteDifferenceForwardModel(grid,source,receiver,freq,None)
-       
-    referencePressureData = []
+    #create inverse model
+    inverse = ConjugateGradientInversion(None, model, input_data)
+    input_data["max"] = 500
 
-    with open(arguments.dir+"output/"+input_data["fileName"]+"InvertedChiToPressure.txt") as f:
-        for line in f:
-            c = line.split(",")
-            referencePressureData.append(complex(float(c[0]),float(c[1])))
 
-    inverse = ConjugateGradientInversion(None,model,input_data)
-    input_data["max"] = 50
-    
-    import time
-    start_time = time.time()
+    #pre process data
+    chi_original = []
+    with open(dir+"input/"+arguments.dir) as f:
+        for val in f:
+            chi_original.append(float(val))
+
+    referencePressureData = model.calculatePressureField(chi_original)
+
     chi = inverse.reconstruct(referencePressureData, input_data)
-    return chi
+    end_time = time.time()-start_time
 
-    print(f"total time: {time.time()-start_time}")
-    with open(arguments.dir+"output/chi20.txt","w") as f:
-        for i in chi.data:
-            f.write(str(i)+"\n")
-        
+    import os, psutil; print(f"Memory: {psutil.Process(os.getpid()).memory_info().rss / 1024 ** 2}")
+    print(f"Time: "{end_time})
 
- 
 
 
 def parse_args():

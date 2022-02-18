@@ -31,14 +31,8 @@ class FiniteDifferenceForwardModel():
         
         self.createGreens()
         self.createKappa(self.freq,self.source,self.receiver)
-        print(len(self.vkappa))
-        print(len(self.vkappa[0].data))
         self.createPTot(freq,source)
         self.calculateKappa()
-        print(len(self.vkappa))
-        print(len(self.vkappa[0].data))
-
-
         
         self.accelerated = accelerated
         if self.accelerated:
@@ -72,16 +66,13 @@ class FiniteDifferenceForwardModel():
         value_r = 0.0
         value_i = 0.0 
         if r != 0.0:          
-            value_r = -0.25 * self.wrapper.cyl_neumann(0.0,k*r) * k *k
-            value_i = 0.25 * self.wrapper.cyl_bessel_j(0.0,k*r) * k * k
+            value_r = -0.25 * self.wrapper.cyl_neumann(0.0, k*r) * k * k
+            value_i = 0.25 * self.wrapper.cyl_bessel_j(0.0, k*r) * k * k
         c = complex(value_r,value_i)
         return c
-        
-  
+
     def calcTotalField(self, G, chiEst, Pinit):
         raise NotImplementedError
-
-   
 
     def createKappa(self,freq,source, receiver):
         for i in range(self.magnitude):
@@ -124,12 +115,7 @@ class FiniteDifferenceForwardModel():
             cur = CurrentPressureFieldSerial.data   
             
         if self.accelerated:
-#             slices = 1
             self.CurrentPressureFieldSerial_buffer_PL[:] = cur[:]
-#             for i in range(slices):
-#                 low_range = 125*i
-#                 high_range = 125* (i + 1)
-#                 self.kappa_buffer_PL[:] = np.array([np.array(x.data) for x in self.vkappa[low_range:high_range]])
             self.dotProduct_HW(self.kappa_buffer_PL, self.CurrentPressureFieldSerial_buffer_PL, self.kOperator_buffer_PL)
             kOperator[:] = self.kOperator_buffer_PL[:]
         else:
