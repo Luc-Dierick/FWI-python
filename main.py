@@ -63,7 +63,7 @@ def main():
     end_time = time.time()-start_time
 
     import os, psutil; print(f"Memory: {psutil.Process(os.getpid()).memory_info().rss / 1024 ** 2}")
-    print(f"Time: "{end_time})
+    print(f"Time: {end_time}")
 
 
 
