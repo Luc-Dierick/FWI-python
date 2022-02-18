@@ -49,7 +49,7 @@ def main():
     #create inverse model
     inverse = ConjugateGradientInversion(None, model, input_data)
     input_data["max"] = 500
-
+    input_data["tolerance"] = 9.99*10**-7
 
     #pre process data
     chi_original = []
