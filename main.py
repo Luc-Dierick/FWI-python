@@ -11,7 +11,8 @@ from finiteDifferenceForwardModel import FiniteDifferenceForwardModel
 from conjugateGradientInversion import ConjugateGradientInversion
 
 from pynq import Overlay, allocate
-
+import os
+import psutil
 
 def main():
 
@@ -21,7 +22,7 @@ def main():
     # import and download the overlay to the PL.
     ol = Overlay(fwi, download=True)
 
-    # set up the dma's for the dotProduct functions
+    # set up the dma's for  the dotProduct functions
     d_vector_I_dma = ol.D_vector_I
     d_matrix_IO_dma = ol.D_matrix_IO
 
@@ -42,29 +43,48 @@ def main():
     receiver = Receivers([input_data["receiversTopLeft"]["x"],input_data["receiversTopLeft"]["z"]], [input_data["receiversBottomRight"]["x"],input_data["receiversBottomRight"]["z"]], input_data["nReceivers"])
     freq = frequenciesGroup(input_data["Freq"],input_data["c_0"])
 
-    #create forward model
-    model = FiniteDifferenceForwardModel(grid, source, receiver, freq, None, True, 100, 300, d_vector_I_dma,
-                                         d_matrix_IO_dma, u_vector_I_dma, u_kappa_IO_dma)
+    dot = []
+    upd = []
+    func_time = []
+    rec_time = []
+    chi = []
+    low = 0
+    high = 100
 
-    #create inverse model
-    inverse = ConjugateGradientInversion(None, model, input_data)
-    input_data["max"] = 500
-    input_data["tolerance"] = 9.99*10**-7
-
-    #pre process data
+    # get data
     chi_original = []
-    with open(dir+"input/"+arguments.dir) as f:
+    with open(dir + "input/" + arguments.dir) as f:
         for val in f:
             chi_original.append(float(val))
 
-    referencePressureData = model.calculatePressureField(chi_original)
+    for i in range(int(len(chi_original) / 100)):
+        #create forward model
+        model = FiniteDifferenceForwardModel(grid, source, receiver, freq, None, True, 100, 300, d_vector_I_dma,
+                                             d_matrix_IO_dma, u_vector_I_dma, u_kappa_IO_dma)
 
-    chi = inverse.reconstruct(referencePressureData, input_data)
-    end_time = time.time()-start_time
+        #create inverse model
+        inverse = ConjugateGradientInversion(None, model, input_data)
+        input_data["max"] = 1000
+        input_data["tolerance"] = 9.99*10**-7
 
-    import os, psutil; print(f"Memory: {psutil.Process(os.getpid()).memory_info().rss / 1024 ** 2}")
-    print(f"Time: {end_time}")
+        referencePressureData = model.calculatePressureField(chi_original[low:high])
 
+        rec_time_s = time.time()
+        chi.extend(inverse.reconstruct(referencePressureData, input_data))
+        rec_time.append(time.time() - rec_time_s)
+
+        dot.append(model.dot_time)
+        upd.append(inverse.updtime)
+        func_time.append(dot[i] + upd[i])
+        low = high
+        high += 100
+
+    rec_time.append(sum(rec_time))
+    dot.append(sum(dot))
+    upd.append(sum(upd))
+    func_time.append(sum(func_time))
+    memory = psutil.Process(os.getpid()).memory_info().rss / (1024 ** 2)
+    total_time = time.time() - start_time
 
 
 def parse_args():
