@@ -89,7 +89,7 @@ def main():
     header = "Total time, Reconstruct time, Dot-function time, Update-function time, Memory\n"
     with open("/home/xilinx/jupyter_notebooks/FWI_python/experiments/"+arguments.experiment_name, "a+b") as f:
         np.savetxt(f, [], header=header)
-        data = np.column_stack(([total_time], rec_time, dot, upd, [memory]))
+        data = np.column_stack(([[total_time]], rec_time, dot, upd, [[memory]]))
         np.savetxt(f, data)
         f.flush()
     print("END")
