@@ -89,6 +89,7 @@ def main():
 
     print(f"rec_time: {rec_time} dot: {dot} upd: {upd} func: {func_time} memory {memory} total {total_time}")
 
+    print("END")
 
 def parse_args():
     #configure argument parser
