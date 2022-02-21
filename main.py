@@ -86,9 +86,12 @@ def main():
     func_time.append(sum(func_time))
     memory = psutil.Process(os.getpid()).memory_info().rss / (1024 ** 2)
     total_time = time.time() - start_time
-
-    print(f"rec_time: {rec_time} dot: {dot} upd: {upd} func: {func_time} memory {memory} total {total_time}")
-
+    header = "Total time, Reconstruct time, Dot-function time, Update-function time, Memory\n"
+    with open("/home/xilinx/jupyter_notebooks/FWI_python/experiments/"+arguments.experiment_name, "a+b") as f:
+        np.savetxt(f, [], header=header)
+        data = np.column_stack((total_time, rec_time, dot, upd, memory))
+        np.savetxt(f, data)
+        f.flush()
     print("END")
 
 def parse_args():
@@ -108,6 +111,9 @@ def parse_args():
 
     parser.add_argument("-d", "--dir", type=str, required=False, default="./default/",
                         help="Path to the folder containing input/output folders")
+
+    parser.add_argument("-e","--experiment_name",type=str, required=True, default="default_experiment.txt",
+                        help="File in which experiment results are stored")
 
     parser.add_argument("--post-dir", type=str, required=False, default="./",
                         help="Path to the folder containing postProcessing-python3.py")
