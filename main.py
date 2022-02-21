@@ -87,6 +87,8 @@ def main():
     memory = psutil.Process(os.getpid()).memory_info().rss / (1024 ** 2)
     total_time = time.time() - start_time
 
+    print(f"rec_time: {rec_time} dot: {dot} upd: {upd} func: {func_time} memory {memory} total {total_time}")
+
 
 def parse_args():
     #configure argument parser
