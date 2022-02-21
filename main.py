@@ -71,7 +71,7 @@ def main():
         referencePressureData = model.calculatePressureField(chi_original[low:high])
 
         rec_time_s = time.time()
-        chi.extend(inverse.reconstruct(referencePressureData, input_data))
+        chi.extend(inverse.reconstruct(referencePressureData, input_data).data)
         rec_time.append(time.time() - rec_time_s)
 
         dot.append(model.dot_time)
