@@ -56,11 +56,10 @@ if __name__ == '__main__':
             f.write("ongoing measurement run, please wait until this file is deleted when this run ends, thanks :)")
     # path to temporary tcl script file that we are using to control vivado
     tcl_script_path = '/home/delft/tcl-scripts/temp-vivado.tcl'
-
+    experiment_name = "300_100_1.txt"
     try:
         print('started lab - performing measurements now...')
         s1, s2, s3 = measure_all(arduino_usb_device_id, shunt_r, gain_factor, offset)
-        print(f"before: {s1} and {s2} and {s3} ")
         totalpowerarray = []
         objecttemperaturearray = []
         ambienttemperaturearray = []
@@ -68,26 +67,30 @@ if __name__ == '__main__':
 
         c = ShellHandler("141.51.124.98", "xilinx", "xilinx")
         print(c.execute_sudo(""))
-        print(c.execute("python3 /home/xilinx/jupyter_notebooks/FWI_python/main.py -d 10x10_100CPU.txt"))
+        print(c.execute("python3 /home/xilinx/jupyter_notebooks/FWI_python/main.py -d 10x10_100CPU.txt -e "+str(experiment_name)))
         while True:
-            time.sleep(0.5)
+            time.sleep(0.1)
             s1, s2, s3 = measure_all(arduino_usb_device_id, shunt_r, gain_factor, offset)
             totalpowerarray.append(s1)
             objecttemperaturearray.append(s2)
             ambienttemperaturearray.append(s3)
             res = c.output()
-            print(res)
             if "END" in res:
                 break
             # DEBUGGING START
-        s1, s2, s3 = measure_all(arduino_usb_device_id, shunt_r, gain_factor, offset)
+        s4, s5, s6 = measure_all(arduino_usb_device_id, shunt_r, gain_factor, offset)
         # DEBUGGING END
+        header = "Total power, Object temperature, Ambient temperature\n"
+        with open("/experiments/" + experiment_name, "a+b") as f:
+            np.savetxt(f, [], header=header)
+            for i in range(len(totalpowerarray)):
+                data = np.column_stack((totalpowerarray[i], objecttemperaturearray[i],ambienttemperaturearray[i]))
+                np.savetxt(f, data)
+                f.flush()
 
-        print(f"end: {s1} and {s2} and {s3} ")
-
-        print(totalpowerarray)
-        print(objecttemperaturearray)
-        print(ambienttemperaturearray)
+        # print(totalpowerarray)
+        # print(objecttemperaturearray)
+        # print(ambienttemperaturearray)
         # close(system_code, unit_code)
         print('finished measurements and shut down lab')
         if os.path.exists(multiple_access_deny_file):
