@@ -39,6 +39,7 @@ def main():
     #load input parameters
     input_data = json.load(inputfile)
 
+    input_data["ngrid"]["z"] = 1
     grid = grid2D([input_data["reservoirTopLeft"]["x"],input_data["reservoirTopLeft"]["z"]], [input_data["reservoirBottomRight"]["x"],input_data["reservoirBottomRight"]["z"]],[input_data["ngrid"]["x"],input_data["ngrid"]["z"]])
     source = Sources([input_data["sourcesTopLeft"]["x"],input_data["sourcesTopLeft"]["z"]], [input_data["sourcesBottomRight"]["x"],input_data["sourcesBottomRight"]["z"]], input_data["nSources"])
     receiver = Receivers([input_data["receiversTopLeft"]["x"],input_data["receiversTopLeft"]["z"]], [input_data["receiversBottomRight"]["x"],input_data["receiversBottomRight"]["z"]], input_data["nReceivers"])
@@ -67,6 +68,7 @@ def main():
         inverse = ConjugateGradientInversion(None, model, input_data)
         input_data["max"] = 1000
         input_data["tolerance"] = 9.99*10**-7
+
 
         referencePressureData = model.calculatePressureField(chi_original[low:high])
 
