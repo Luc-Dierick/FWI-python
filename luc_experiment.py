@@ -81,7 +81,7 @@ if __name__ == '__main__':
         s4, s5, s6 = measure_all(arduino_usb_device_id, shunt_r, gain_factor, offset)
         # DEBUGGING END
         header = "Total power, Object temperature, Ambient temperature\n"
-        with open("/experiments/" + experiment_name, "a+b") as f:
+        with open("./experiments/" + experiment_name, "w+b") as f:
             np.savetxt(f, [], header=header)
             for i in range(len(totalpowerarray)):
                 data = np.column_stack((totalpowerarray[i], objecttemperaturearray[i],ambienttemperaturearray[i]))
