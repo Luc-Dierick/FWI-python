@@ -6,6 +6,10 @@ from dataGrid2D import dataGrid2D
 import numpy as np
 import time
 import copy
+# from pynq import allocate
+import time
+import sys
+# from tqdm import tqdm, tqdm_notebook
 
 class ConjugateGradientInversion():
     
@@ -20,6 +24,19 @@ class ConjugateGradientInversion():
         self.chiEstimate = dataGrid2D(self.grid)
         self.magnitude = self.frequencies.count * self.sources.count * self.receivers.count
         self.updtime = 0
+        if self.forwardModel.accelerated:
+            #set up DMAs
+            self.d_vector_I_dma = self.forwardModel.d_vector_I_dma
+            self.d_matrix_IO_dma =self.forwardModel.d_matrix_IO_dma
+            self.u_vector_I_dma = self.forwardModel.u_vector_I_dma
+            self.u_kappa_IO_dma = self.forwardModel.u_kappa_IO_dma
+            
+            #allocate contiguous memory for kappa and put kappa in there.
+            self.kappa_buffer_PL = allocate(shape=(125,self.forwardModel.gridsize), dtype=np.complex64)
+            self.kappa_buffer_PL[:] = self.forwardModel.kappa_buffer_PL #np.array([np.array(x.data) for x in self.forwardModel.getKernel()])[:]
+                     
+            self.residualVector_buffer_PL = allocate(shape=(125,),dtype=np.complex64)
+            self.kappaTimesResidual_buffer_PL = allocate(shape=(self.forwardModel.gridsize), dtype=np.complex64)
         
     def calculateCost(self, pData, pDataEst, eta):
         return eta * self.l2NormSquared(np.subtract(pData,pDataEst))
@@ -32,13 +49,14 @@ class ConjugateGradientInversion():
         return initialvalue
     
     def reconstruct(self, pData, gInput):
+        counter = 1
 
         # Initialization of variables
         eta = 1.0 / self.calculateCost(pData, [0.0]* len(pData), 1.0)
 
         self.chiEstimate.zero()
         isConverged = False
-        tolerance = 9.99*10**-7
+        tolerance = 1.0*10**-6 #9.99*10**-7
         counter = 1
 
 
@@ -66,7 +84,7 @@ class ConjugateGradientInversion():
         alpha = self.calculateStepSize(zeta, residualVector)
 
         self.chiEstimate = self.chiEstimate + (np.multiply(alpha, zeta))
-        
+
         gradientPrevious = copy.deepcopy(gradientCurrent)
         residualPrevious = copy.deepcopy(residualCurrent)
         # main loop
@@ -92,7 +110,7 @@ class ConjugateGradientInversion():
             self.calculateRegularisationParameters(regularisationPrevious, regularisationCurrent, deltaAmplification)
             zeta, gradientCurrent, gradientPrevious = self.calculateUpdateDirectionRegularisation(residualVector, gradientCurrent, gradientPrevious, eta, regularisationCurrent, regularisationPrevious, zeta, residualPrevious)
             alpha = self.calculateStepSizeRegularisation(regularisationPrevious, regularisationCurrent, residualVector, eta, residualPrevious, zeta)
-            
+
             self.chiEstimate = self.chiEstimate + (zeta * alpha)
 
             # save regularisation variables for next iteration
@@ -107,6 +125,7 @@ class ConjugateGradientInversion():
             print("LOOP :"+ str(counter))
             # update counter
             counter+=1
+            print(f"Loop: {counter} ")
 
         return self.chiEstimate, counter
 
@@ -275,6 +294,16 @@ class ConjugateGradientInversion():
                     kappaTimesResidual = kappaTimesResidual + np.multiply(residualVector[l_i + l_j + k],dummy.data)
         self.updtime += time.time()-start_time
         return kappaTimesResidual
+
+
+    def updateDirection_HW(self, update_in, update_kappa_in, s_out):
+        self.u_vector_I_dma.sendchannel.transfer(update_in)
+        self.u_kappa_IO_dma.sendchannel.transfer(update_kappa_in)
+        self.u_kappa_IO_dma.recvchannel.transfer(s_out)
+
+        self.u_vector_I_dma.sendchannel.wait()
+        self.u_kappa_IO_dma.sendchannel.wait()
+        self.u_kappa_IO_dma.recvchannel.wait()
 
 
 

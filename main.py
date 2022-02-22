@@ -12,6 +12,8 @@ from conjugateGradientInversion import ConjugateGradientInversion
 
 def main():
 
+    import time
+    start_time = time.time()
     arguments = parse_args()
     
     print(arguments)
@@ -46,34 +48,24 @@ def main():
             f.write("\n")
     
     
-    referencePressureData = []
-    with open(arguments.dir+"output/"+input_data["fileName"]+"InvertedChiToPressure.txt") as f:
-        for line in f:
-            c = line.split(",")
-            referencePressureData.append(complex(float(c[0]),float(c[1])))
+    referencePressureData = ref
+
+    # with open(arguments.dir+"output/"+input_data["fileName"]+"InvertedChiToPressure.txt") as f:
+    #     for line in f:
+    #         c = line.split(",")
+    #         referencePressureData.append(complex(float(c[0]),float(c[1])))
 
     inverse = ConjugateGradientInversion(None,model,input_data)
     input_data["max"] = 10000
     
-    import time
-    start_time = time.time()
-    print("started")
-    chi, iter = inverse.reconstruct(referencePressureData, input_data)
+   
+    chi = inverse.reconstruct(referencePressureData, input_data)
     
-    total_t = time.time()-start_time
-    
-    print(f"dot: {model.dot_time} upd: {inverse.updtime} func: {model.dot_time + inverse.updtime}")
-    
-    with open(arguments.dir+"output/"+input_data["fileName"]+"STATS.txt","w") as f:
-        f.write(f"{total_t},{model.dot_time},{inverse.updtime},{iter}")
-        
     with open(arguments.dir+"output/"+input_data["fileName"]+"RES.txt","w") as f:
         for i in chi.data:
             f.write(str(i)+"\n")
-        
-
- 
-
+    print(f"total time: {time.time()-start_time}")
+    print(f"dot: {model.dot_time} upd: {inverse.updtime} func: {model.dot_time + inverse.updtime}")
 
 def parse_args():
     #configure argument parser
