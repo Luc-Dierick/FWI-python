@@ -19,7 +19,7 @@ from pynq import Overlay, allocate
 def main():
     start_time = time.time()
 
-    fwi = "300_100.bit"
+    fwi = "300_10.bit"
     # import and download the overlay to the PL.
     ol = Overlay(fwi, download=True)
 
@@ -50,7 +50,7 @@ def main():
     rec_time = []
     chi = []
     low = 0
-    high = 100
+    high = 10
 
     # get data
     chi_original = []
@@ -58,9 +58,9 @@ def main():
         for val in f:
             chi_original.append(float(val))
 
-    for i in range(int(len(chi_original) / 100)):
+    for i in range(int(len(chi_original) / 10)):
         #create forward model
-        model = FiniteDifferenceForwardModel(grid, source, receiver, freq, None, True, 100, 300, d_vector_I_dma,
+        model = FiniteDifferenceForwardModel(grid, source, receiver, freq, None, True, 10, 300, d_vector_I_dma,
                                              d_matrix_IO_dma, u_vector_I_dma, u_kappa_IO_dma)
 
         #create inverse model
@@ -78,7 +78,7 @@ def main():
         upd.append(inverse.updtime)
         func_time.append(dot[i] + upd[i])
         low = high
-        high += 100
+        high += 10
 
     rec_time.append(sum(rec_time))
     dot.append(sum(dot))
