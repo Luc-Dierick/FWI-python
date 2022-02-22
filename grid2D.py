@@ -7,8 +7,9 @@ class grid2D():
         self._xMax = x_max 
         self._nx = [int(x) for x in nx]
         self._dx = [0]*2 
+        
         self._dx[0] = int((self._xMax[0] - self._xMin[0])/self._nx[0])
-        self._dx[1] = int((self._xMax[1] - self._xMin[1])/self._nx[1])
+        self._dx[1] = int((self._xMax[1] - self._xMin[1])/self._nx[1]) if int((self._xMax[1] - self._xMin[1])/self._nx[1]) > 0 else 1
         self._nGridPoints = int(self._nx[0]*self._nx[1])
         self._cellVolume = self._dx[0] *self._dx[1]
         

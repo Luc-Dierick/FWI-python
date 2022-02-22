@@ -104,11 +104,11 @@ class ConjugateGradientInversion():
             regularisationPrevious.deltaSquared = copy.deepcopy(regularisationCurrent.deltaSquared)
             regularisationPrevious.bSquared = copy.deepcopy(regularisationCurrent.bSquared)
 
-            # print("LOOP :"+ str(counter))
+            print("LOOP :"+ str(counter))
             # update counter
             counter+=1
 
-        return self.chiEstimate
+        return self.chiEstimate, counter
 
 
     def calculateRegularisationErrorFunctional(self, regularisationPrevious, regularisationCurrent):

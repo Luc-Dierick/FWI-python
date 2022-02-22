@@ -1,7 +1,7 @@
 from ctypes import cdll
 from ctypes import c_double
 pynq = '/home/xilinx/jupyter_notebooks/PYNQ-FWI/FWI_python/neuman.so' #32 bit compiled.
-wsl  = '/home/lucdierick/FWI-python/neumann.so'
+wsl  = '/home/lucdierick/FWI-python/neumannwsl.so'
 linux = "/home/luc/Documents/FWI-python/neumann.so"
 lib = cdll.LoadLibrary(wsl)
  

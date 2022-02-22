@@ -16,7 +16,7 @@ def main():
     
     print(arguments)
 
-    #arguments.dir ="/home/lucdierick/FWI-python/default/"
+    arguments.dir ="/home/lucdierick/FWI-python/default/"
     
     inputfile = open(arguments.dir+"input/GenericInput.json")
 
@@ -34,34 +34,39 @@ def main():
     
     #pre_processing
     chi = []
-    with open("./default/input/"+input_data["fileName"]+".txt","r") as f:
+    with open(arguments.dir+"input/"+input_data["fileName"]+".txt","r") as f:
         for line in f:
             chi.append(float(line))
         
     ref = model.calculatePressureField(chi)
     
-    with open("./default/output/"+input_data["fileName"]+"InvertedChiToPressure.txt","w") as f:
+    with open(arguments.dir+"output/"+input_data["fileName"]+"InvertedChiToPressure.txt","w") as f:
         for i in ref:
             f.write(str(i.real)+","+str(i.imag))
             f.write("\n")
     
     
     referencePressureData = []
-
     with open(arguments.dir+"output/"+input_data["fileName"]+"InvertedChiToPressure.txt") as f:
         for line in f:
             c = line.split(",")
             referencePressureData.append(complex(float(c[0]),float(c[1])))
 
     inverse = ConjugateGradientInversion(None,model,input_data)
-    input_data["max"] = 1000
+    input_data["max"] = 10000
     
     import time
     start_time = time.time()
-    chi = inverse.reconstruct(referencePressureData, input_data)
+    print("started")
+    chi, iter = inverse.reconstruct(referencePressureData, input_data)
     
-    print(f"total time: {time.time()-start_time}")
+    total_t = time.time()-start_time
+    
     print(f"dot: {model.dot_time} upd: {inverse.updtime} func: {model.dot_time + inverse.updtime}")
+    
+    with open(arguments.dir+"output/"+input_data["fileName"]+"STATS.txt","w") as f:
+        f.write(f"{total_t},{model.dot_time},{inverse.updtime},{iter}")
+        
     with open(arguments.dir+"output/"+input_data["fileName"]+"RES.txt","w") as f:
         for i in chi.data:
             f.write(str(i)+"\n")
@@ -78,7 +83,7 @@ def parse_args():
     parser.add_argument("-b", "--bin", type=str, required=False, default="./bin/",
                         help="Path to bin folder containing the app executables")
 
-    parser.add_argument("-d", "--dir", type=str, required=False, default="./default/",
+    parser.add_argument("-d", "--dir", type=str, required=False, default="./experiment/",
                         help="Path to the folder containing input/output folders")
 
     parser.add_argument("--post-dir", type=str, required=False, default="./",
