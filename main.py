@@ -19,7 +19,7 @@ from pynq import Overlay, allocate
 def main():
     start_time = time.time()
 
-    fwi = "300_10.bit"
+    fwi = "300_20.bit"
     # import and download the overlay to the PL.
     ol = Overlay(fwi, download=True)
 
@@ -39,7 +39,8 @@ def main():
     #load input parameters
     input_data = json.load(inputfile)
 
-    input_data["ngrid"]["z"] = 1
+    input_data["ngrid"]["z"] = 4
+    input_data["ngrid"]["x"] = 5
     grid = grid2D([input_data["reservoirTopLeft"]["x"],input_data["reservoirTopLeft"]["z"]], [input_data["reservoirBottomRight"]["x"],input_data["reservoirBottomRight"]["z"]],[input_data["ngrid"]["x"],input_data["ngrid"]["z"]])
     source = Sources([input_data["sourcesTopLeft"]["x"],input_data["sourcesTopLeft"]["z"]], [input_data["sourcesBottomRight"]["x"],input_data["sourcesBottomRight"]["z"]], input_data["nSources"])
     receiver = Receivers([input_data["receiversTopLeft"]["x"],input_data["receiversTopLeft"]["z"]], [input_data["receiversBottomRight"]["x"],input_data["receiversBottomRight"]["z"]], input_data["nReceivers"])
@@ -51,7 +52,7 @@ def main():
     rec_time = []
     chi = []
     low = 0
-    high = 10
+    high = 20
 
     # get data
     chi_original = []
@@ -59,9 +60,9 @@ def main():
         for val in f:
             chi_original.append(float(val))
 
-    for i in range(int(len(chi_original) / 10)):
+    for i in range(int(len(chi_original) / 20)):
         #create forward model
-        model = FiniteDifferenceForwardModel(grid, source, receiver, freq, None, True, 10, 300, d_vector_I_dma,
+        model = FiniteDifferenceForwardModel(grid, source, receiver, freq, None, True, 20, 300, d_vector_I_dma,
                                              d_matrix_IO_dma, u_vector_I_dma, u_kappa_IO_dma)
 
         #create inverse model
@@ -80,7 +81,7 @@ def main():
         upd.append(inverse.updtime)
         func_time.append(dot[i] + upd[i])
         low = high
-        high += 10
+        high += 20
 
     rec_time.append(sum(rec_time))
     dot.append(sum(dot))
