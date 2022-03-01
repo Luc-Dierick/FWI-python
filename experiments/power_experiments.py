@@ -3,9 +3,6 @@ import matplotlib.pyplot as plt
 import json
 import copy
 
-win = "D:/Dask/FWI-python/"
-win = "."
-
 l = [10, 100, 500]
 
 num = ""
@@ -33,11 +30,11 @@ idle_object_20 = []
 memory_20 = []
 
 for i in l:
-    data = np.loadtxt(f"{win}/experiments/300_100_{i*10}.txt")
+    data = np.loadtxt(f"D:/Dask/FWI-python/experiments/300_100_{i*10}.txt")
     data_t = data.T #get transpose
     memory.append(np.mean(data_t[4]))
 
-    data_host = np.loadtxt(f"{win}/experiments/300_100_{i*10}_host.txt")
+    data_host = np.loadtxt(f"D:/Dask/FWI-python/experiments/300_100_{i*10}_host.txt")
     data_host_t = data_host.T
     total_power.append(np.mean(data_host_t[0]))
     total_object.append(np.mean(data_host_t[1]))
@@ -49,14 +46,13 @@ for i in l:
 
     ################### 20 #######################
 
-    data_20 = np.loadtxt(f"{win}/experiments/300_20_{i*10}.txt")
+    data_20 = np.loadtxt(f"D:/Dask/FWI-python/experiments/300_20_{i*10}.txt")
     data_t_20 = data_20.T #get transpose
     memory_20.append(np.mean(data_t_20[4]))
 
-    data_host_20 = np.loadtxt(f"{win}/experiments/300_20_{i*10}_host.txt")
+    data_host_20 = np.loadtxt(f"D:/Dask/FWI-python/experiments/300_20_{i*10}_host.txt")
     data_host_t_20 = data_host_20.T
     total_power_20.append(np.mean(data_host_t_20[0]))
-    total_object_20.append(np.mean(data_host_t_20[1]))
     total_object_20.append(np.mean(data_host_t_20[1]))
     total_ambient_20.append(np.mean(data_host_t_20[2]))
     idle_power_20.append(np.mean(data_host_t_20[3]))
@@ -66,7 +62,7 @@ for i in l:
 print(f"average memory: {memory}")
 print(f"average memory: {memory_20}")
 
-labels = ["300_100", "300_20", "estimated power 100", "estimated power 20"]
+labels = ["High utilization", "Low utilization", "Estimated power High", "Estimated power low"]
 plt.title("Total power over gridpoints")
 plt.xlabel("Gridpoints")
 plt.ylabel("Power in Watt")
