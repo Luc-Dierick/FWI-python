@@ -5,6 +5,8 @@ import copy
 
 l = [10, 100, 500]
 
+win = "D:/Dask/FWI-python"
+win = "."
 num = ""
 
 total_time = []
@@ -30,11 +32,11 @@ idle_object_20 = []
 memory_20 = []
 
 for i in l:
-    data = np.loadtxt(f"D:/Dask/FWI-python/experiments/300_100_{i*10}.txt")
+    data = np.loadtxt(f"{win}/experiments/300_100_{i*10}.txt")
     data_t = data.T #get transpose
     memory.append(np.mean(data_t[4]))
 
-    data_host = np.loadtxt(f"D:/Dask/FWI-python/experiments/300_100_{i*10}_host.txt")
+    data_host = np.loadtxt(f"{win}/experiments/300_100_{i*10}_host.txt")
     data_host_t = data_host.T
     total_power.append(np.mean(data_host_t[0]))
     total_object.append(np.mean(data_host_t[1]))
@@ -46,11 +48,11 @@ for i in l:
 
     ################### 20 #######################
 
-    data_20 = np.loadtxt(f"D:/Dask/FWI-python/experiments/300_20_{i*10}.txt")
+    data_20 = np.loadtxt(f"{win}/experiments/300_20_{i*10}.txt")
     data_t_20 = data_20.T #get transpose
     memory_20.append(np.mean(data_t_20[4]))
 
-    data_host_20 = np.loadtxt(f"D:/Dask/FWI-python/experiments/300_20_{i*10}_host.txt")
+    data_host_20 = np.loadtxt(f"{win}/experiments/300_20_{i*10}_host.txt")
     data_host_t_20 = data_host_20.T
     total_power_20.append(np.mean(data_host_t_20[0]))
     total_object_20.append(np.mean(data_host_t_20[1]))
