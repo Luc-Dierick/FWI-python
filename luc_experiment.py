@@ -14,6 +14,7 @@ from set_pin import stop_reset as stop_reset
 from matplotlib import pyplot as plt
 import numpy as np
 import paramiko
+from handler import ShellHandler
 
 # shunt_r = 0.025185882
 # shunt_r = 0.05957
@@ -56,47 +57,51 @@ if __name__ == '__main__':
             f.write("ongoing measurement run, please wait until this file is deleted when this run ends, thanks :)")
     # path to temporary tcl script file that we are using to control vivado
     tcl_script_path = '/home/delft/tcl-scripts/temp-vivado.tcl'
-    experiment_name = "300_100_1.txt"
+    experiment_name = "300_20_5000.txt"
+    header = "Total power, Object temperature, Ambient temperature, Idle power, Idle object, Idle ambient\n"
+    header += "Iteration {iter}\n"
     try:
         print('started lab - performing measurements now...')
-        s1, s2, s3 = measure_all(arduino_usb_device_id, shunt_r, gain_factor, offset)
-        totalpowerarray = []
-        objecttemperaturearray = []
-        ambienttemperaturearray = []
-        from handler import ShellHandler
-
         c = ShellHandler("141.51.124.98", "xilinx", "xilinx")
         print(c.execute_sudo(""))
-        print(c.execute("python3 /home/xilinx/jupyter_notebooks/FWI_python/main.py -d 10x10_100CPU.txt -e "+str(experiment_name)))
-        while True:
-            time.sleep(0.1)
-            s1, s2, s3 = measure_all(arduino_usb_device_id, shunt_r, gain_factor, offset)
-            totalpowerarray.append(s1)
-            objecttemperaturearray.append(s2)
-            ambienttemperaturearray.append(s3)
-            res = c.output()
-            if "END" in res:
-                break
-            # DEBUGGING START
-        s4, s5, s6 = measure_all(arduino_usb_device_id, shunt_r, gain_factor, offset)
-        # DEBUGGING END
-        header = "Total power, Object temperature, Ambient temperature\n"
-        with open("./experiments/" + experiment_name, "w+b") as f:
-            np.savetxt(f, [], header=header)
-            for i in range(len(totalpowerarray)):
-                data = np.column_stack((totalpowerarray[i], objecttemperaturearray[i],ambienttemperaturearray[i]))
-                np.savetxt(f, data)
-                f.flush()
+        for iter in range(10):
+            i1, i2, i3 = measure_all(arduino_usb_device_id, shunt_r, gain_factor, offset)  # programmed (idle power)
+            totalpowerarray = []
+            objecttemperaturearray = []
+            ambienttemperaturearray = []
+            idlepower = []
+            idleobject = []
+            idleambient = []
+            idlepower.append(i1)
+            idleobject.append(i2)
+            idleambient.append(i3)
 
-        # print(totalpowerarray)
-        # print(objecttemperaturearray)
-        # print(ambienttemperaturearray)
-        # close(system_code, unit_code)
+            print(c.execute("python3 /home/xilinx/jupyter_notebooks/FWI_python/main.py -d 10x500_5000CPU.txt -e " + str(
+                experiment_name)))
+            while True:
+                s1, s2, s3 = measure_all(arduino_usb_device_id, shunt_r, gain_factor, offset)
+                totalpowerarray.append(s1)
+                objecttemperaturearray.append(s2)
+                ambienttemperaturearray.append(s3)
+                res = c.output()
+                print(res)
+                if "END" in res:
+                    break
+
+            with open("/home/delft/python-scripts/power-measurement/experiments/" + experiment_name, "a+b") as f:
+                if iter == 0:
+                    np.savetxt(f, [], header=header)
+                for i in range(len(totalpowerarray)):
+                    data = np.column_stack((totalpowerarray[i], objecttemperaturearray[i], ambienttemperaturearray[i],
+                                            idlepower[-1], idleobject[-1], idleambient[-1]))
+                    np.savetxt(f, data)
+                    f.flush()
+
         print('finished measurements and shut down lab')
         if os.path.exists(multiple_access_deny_file):
             os.remove(multiple_access_deny_file)
     except Exception as e:
-            print(f'Detected measurement failure: "{e}" - cleaning up the mess, now...')
-            # close(system_code, unit_code)
-            if os.path.exists(multiple_access_deny_file):
-                os.remove(multiple_access_deny_file)
+        print(f'Detected measurement failure: "{e}" - cleaning up the mess, now...')
+        # close(system_code, unit_code)
+        if os.path.exists(multiple_access_deny_file):
+            os.remove(multiple_access_deny_file)
