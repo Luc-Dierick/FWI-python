@@ -1,8 +1,8 @@
 
 from numpy.lib.function_base import gradient
-from .finiteDifferenceForwardModel import FiniteDifferenceForwardModel
-from .regularization import RegularisationParameters
-from .dataGrid2D import dataGrid2D
+from FWI.finiteDifferenceForwardModel import FiniteDifferenceForwardModel
+from FWI.regularization import RegularisationParameters
+from FWI.dataGrid2D import dataGrid2D
 import numpy as np
 import copy
 from pynq import allocate
@@ -11,7 +11,7 @@ import time
 
 class ConjugateGradientInversion():
     
-    def __init__(self, costCalculator, forwardModel, invInput):
+    def __init__(self, costCalculator, forwardModel, invInput,A,B,C):
         self.forwardModel = forwardModel
         self.costCalculator = costCalculator
         self.cgInput = invInput
@@ -24,17 +24,13 @@ class ConjugateGradientInversion():
         self.updtime = 0
         if self.forwardModel.accelerated:
             #set up DMAs
-            self.d_vector_I_dma = self.forwardModel.d_vector_I_dma
-            self.d_matrix_IO_dma =self.forwardModel.d_matrix_IO_dma
-            self.u_vector_I_dma = self.forwardModel.u_vector_I_dma
-            self.u_kappa_IO_dma = self.forwardModel.u_kappa_IO_dma
-            
+            self.update = self.forwardModel.update            
             #allocate contiguous memory for kappa and put kappa in there.
-            self.kappa_buffer_PL = allocate(shape=(self.forwardModel.resolution,self.forwardModel.gridsize), dtype=np.complex64)
+            self.kappa_buffer_PL = A
             self.kappa_buffer_PL[:] = self.forwardModel.kappa_buffer_PL
                      
-            self.residualVector_buffer_PL = allocate(shape=(self.forwardModel.resolution,),dtype=np.complex64)
-            self.kappaTimesResidual_buffer_PL = allocate(shape=(self.forwardModel.gridsize), dtype=np.complex64)
+            self.residualVector_buffer_PL = B
+            self.kappaTimesResidual_buffer_PL = C
         
     def calculateCost(self, pData, pDataEst, eta):
         return eta * self.l2NormSquared(np.subtract(pData,pDataEst))
@@ -127,7 +123,6 @@ class ConjugateGradientInversion():
 
             # update counter
             counter+=1
-            print(f"Loop: {counter} ")
 
         return self.chiEstimate
 
@@ -241,8 +236,7 @@ class ConjugateGradientInversion():
         bTimesGradientChiZSquared.square()
 
         bTimesGradientChiNormSquared = (bTimesGradientChiXSquared + bTimesGradientChiZSquared).summation()
-        bSquaredSummed = 0
-        [bSquaredSummed := bSquaredSummed + x for x in regularisationCurrent.bSquared.data]
+        bSquaredSummed = np.sum(regularisationCurrent.bSquared.data)
         res = deltaAmplification * 0.5 * bTimesGradientChiNormSquared / bSquaredSummed
         return res
 
@@ -307,14 +301,14 @@ class ConjugateGradientInversion():
 
 
     def updateDirection_HW(self, update_in, update_kappa_in, s_out):
-        self.u_vector_I_dma.sendchannel.transfer(update_in)
-        self.u_kappa_IO_dma.sendchannel.transfer(update_kappa_in)
-        self.u_kappa_IO_dma.recvchannel.transfer(s_out)
-
-        self.u_vector_I_dma.sendchannel.wait()
-        self.u_kappa_IO_dma.sendchannel.wait()
-        self.u_kappa_IO_dma.recvchannel.wait()
-
+        update_in.sync_to_device()
+        update_kappa_in.sync_to_device()
+        
+        self.update.call(update_in,update_kappa_in,s_out)
+        
+        s_out.sync_from_device()
+        
+        
 
 
         
